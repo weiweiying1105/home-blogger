@@ -1,0 +1,88 @@
+{
+  "categories": [
+    {
+      "id": "cmvrh3ooy0001wqnwh295swiu",
+      "name": "家居",
+      "parentId": null,
+      "order": 0,
+      "createdAt": "2026-10-28T02:06:14.720Z"
+    },
+    {
+      "id": "cmvrh3vgn0003wqnwlnnvq7ql",
+      "name": "客厅",
+      "parentId": "cmvrh3ooy0001wqnwh295swiu",
+      "order": 0,
+      "createdAt": "2026-10-28T02:06:23.496Z"
+    },
+    {
+      "id": "cmvrh433m0005wqnwodpljozz",
+      "name": "服装",
+      "parentId": null,
+      "order": 0,
+      "createdAt": "2026-10-28T02:06:33.394Z"
+    }
+  ],
+  "images": [
+    {
+      "id": "cmvrgialr0002wq8oiclqvnwm",
+      "url": "https://home-blogger-1303796882.cos.ap-guangzhou.myqcloud.com/images/1793152175973-gilcxw.jpg",
+      "thumbnail": "https://home-blogger-1303796882.cos.ap-guangzhou.myqcloud.com/images/1793152175973-gilcxw-thumb.jpg",
+      "title": "O1CN01eI9e7B1SbQEPfKr4P~livephoto~_!!4611686018427380873-53-fleamarket.heic_Q90.jpg_",
+      "description": "",
+      "colors": "",
+      "width": null,
+      "height": null,
+      "size": 398694,
+      "createdAt": "2026-10-28T01:49:36.687Z"
+    }
+  ],
+  "categoryOnImage": [
+    {
+      "id": "cmvri1pp4000awqw89k43kq02",
+      "imageId": "cmvrgialr0002wq8oiclqvnwm",
+      "categoryId": "cmvrh3ooy0001wqnwh295swiu"
+    },
+    {
+      "id": "cmvrisi150001wqfg3ihgo3p6",
+      "imageId": "cmvrgialr0002wq8oiclqvnwm",
+      "categoryId": "cmvrh3vgn0003wqnwlnnvq7ql"
+    }
+  ],
+  "tags": [
+    {
+      "id": "cmvrhoaze0000wqw8yiksyz6m",
+      "name": "????",
+      "createdAt": "2026-10-28T02:22:16.731Z"
+    },
+    {
+      "id": "cmvrhulg80003wqw8hx4jesot",
+      "name": "沙发",
+      "createdAt": "2026-10-28T02:27:10.232Z"
+    },
+    {
+      "id": "cmvrhupw20006wqw8d3np7j4l",
+      "name": "客厅",
+      "createdAt": "2026-10-28T02:27:15.987Z"
+    }
+  ],
+  "imageTag": [
+    {
+      "id": "cmvrhoazz0002wqw8pielihqw",
+      "imageId": "cmvrgialr0002wq8oiclqvnwm",
+      "tagId": "cmvrhoaze0000wqw8yiksyz6m"
+    },
+    {
+      "id": "cmvrhulgr0005wqw80428knsn",
+      "imageId": "cmvrgialr0002wq8oiclqvnwm",
+      "tagId": "cmvrhulg80003wqw8hx4jesot"
+    },
+    {
+      "id": "cmvrhupwm0008wqw856m948bi",
+      "imageId": "cmvrgialr0002wq8oiclqvnwm",
+      "tagId": "cmvrhupw20006wqw8d3np7j4l"
+    }
+  ],
+  "plans": [],
+  "planMaterial": [],
+  "todos": []
+}
