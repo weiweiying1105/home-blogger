@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 图片实体
+model Image {
+  id          String    @id @default(cuid())
+  url         String
+  thumbnail   String?
+  title       String    @default("")
+  description String    @default("")
+  colors      String    @default("")
+  width       Int?
+  height      Int?
+  size        Int?
+  createdAt   DateTime  @default(now())
+  categories  CategoryOnImage[]
+  tags        ImageTag[]
+  plans       PlanMaterial[]
+}
+
+// 分类（树形，支持无限层级）
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    Category? @relation("SubCategories", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("SubCategories")
+  order     Int       @default(0)
+  createdAt DateTime  @default(now())
+  images    CategoryOnImage[]
+}
+
+// 图片-分类 多对多
+model CategoryOnImage {
+  id         String   @id @default(cuid())
+  imageId    String
+  categoryId String
+  image      Image    @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  @@unique([imageId, categoryId])
+}
+
+// 发布计划
+model Plan {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    @default("")
+  status      String    @default("draft")
+  scheduledAt DateTime?
+  createdAt   DateTime  @default(now())
+  materials   PlanMaterial[]
+}
+
+model PlanMaterial {
+  id      String @id @default(cuid())
+  planId  String
+  imageId String
+  order   Int    @default(0)
+  plan    Plan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  image   Image  @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  @@unique([planId, imageId])
+}
+
+// 四象限待办
+model Todo {
+  id        String   @id @default(cuid())
+  title     String
+  note      String   @default("")
+  quadrant  Int      // 1=紧急重要 2=重要不紧急 3=紧急不重要 4=不紧急不重要
+  done      Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// 自由标签
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  images    ImageTag[]
+}
+
+model ImageTag {
+  id      String @id @default(cuid())
+  imageId String
+  tagId   String
+  image   Image  @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  @@unique([imageId, tagId])
+}
