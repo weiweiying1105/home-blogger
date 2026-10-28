@@ -4,5 +4,8 @@ const nextConfig = {
   images: {
     remotePatterns: [{ protocol: "http", hostname: "localhost" }],
   },
+  // 服务器独立部署（deploy/setup.sh 用），产物在 .next/standalone
+  output: "standalone",
 };
+
 export default nextConfig;

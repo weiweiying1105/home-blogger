@@ -1,0 +1,6 @@
+# Caddy 反向代理配置：自动为域名签发 Let's Encrypt 证书
+# 前提：域名 A 记录已指向本机公网 IP（DNS only，不走 Cloudflare 代理）
+weiyingwillsucceed.xyz {
+	encode gzip
+	reverse_proxy 127.0.0.1:3000
+}
