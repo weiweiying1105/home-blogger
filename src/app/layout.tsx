@@ -21,25 +21,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 href="/"
                 className="block px-3 py-2 rounded-lg text-sm text-stone-700 hover:bg-stone-100 transition"
               >
-                发布计划
+                Plans
               </Link>
               <Link
                 href="/images"
                 className="block px-3 py-2 rounded-lg text-sm text-stone-700 hover:bg-stone-100 transition"
               >
-                图片管理
+                Images
               </Link>
               <Link
                 href="/gallery"
                 className="block px-3 py-2 rounded-lg text-sm text-stone-700 hover:bg-stone-100 transition"
               >
-                审美积累
+                Gallery
               </Link>
               <Link
                 href="/todos"
                 className="block px-3 py-2 rounded-lg text-sm text-stone-700 hover:bg-stone-100 transition"
               >
-                待办四象限
+                Todos
               </Link>
             </nav>
           </aside>
