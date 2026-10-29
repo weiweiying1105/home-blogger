@@ -104,6 +104,7 @@ model Blogger {
   name      String   @default("")
   bio       String   @default("")
   avatarUrl String   @default("")
+  coverUrl  String   @default("")
   insUrl    String   @default("")
   followers String   @default("")
   sortOrder Int      @default(0)

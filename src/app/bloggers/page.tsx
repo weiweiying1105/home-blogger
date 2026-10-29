@@ -8,12 +8,13 @@ type Blogger = {
   name: string;
   bio: string;
   avatarUrl: string;
+  coverUrl: string;
   insUrl: string;
   followers: string;
   sortOrder: number;
 };
 
-const EMPTY = { username: "", name: "", bio: "", avatarUrl: "", insUrl: "", followers: "" };
+const EMPTY = { username: "", name: "", bio: "", avatarUrl: "", coverUrl: "", insUrl: "", followers: "" };
 
 export default function BloggersPage() {
   const [bloggers, setBloggers] = useState<Blogger[]>([]);
@@ -86,37 +87,41 @@ export default function BloggersPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map((b) => (
-          <div key={b.id} className="bg-white rounded-xl border border-stone-200 p-4 flex flex-col items-center text-center">
-            <img
-              src={b.avatarUrl || `/bloggers/${b.username}.jpg`}
-              alt={b.username}
-              className="w-24 h-24 rounded-full object-cover border border-stone-200"
-              onError={(e) => { (e.target as HTMLImageElement).src = `/bloggers/${b.username}.jpg`; }}
-            />
-            <div className="mt-3 font-semibold text-sm">@{b.username}</div>
-            {b.name && <div className="text-xs text-stone-500 mt-1 line-clamp-2">{b.name}</div>}
-            {b.followers && <div className="text-xs text-stone-400 mt-1">{b.followers} 粉丝</div>}
-            <div className="flex gap-2 mt-3 w-full">
-              <a
-                href={b.insUrl || `https://www.instagram.com/${b.username}/`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 text-center text-xs bg-stone-100 hover:bg-stone-200 rounded-lg py-1.5"
-              >
-                Ins
-              </a>
-              <button
-                onClick={() => { setEditing(b); setForm({ username: b.username, name: b.name, bio: b.bio, avatarUrl: b.avatarUrl, insUrl: b.insUrl, followers: b.followers }); setAdding(true); }}
-                className="flex-1 text-xs bg-stone-800 text-white rounded-lg py-1.5"
-              >
-                编辑
-              </button>
-              <button
-                onClick={() => remove(b)}
-                className="text-xs bg-red-50 text-red-600 hover:bg-red-100 rounded-lg py-1.5 px-2"
-              >
-                删除
-              </button>
+          <div key={b.id} className="bg-white rounded-xl border border-stone-200 overflow-hidden flex flex-col">
+            <div className="aspect-[4/3] bg-stone-100 overflow-hidden">
+              <img
+                src={b.coverUrl || `/bloggers/covers/${b.username}.jpg`}
+                alt={b.username}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).src = b.avatarUrl || `/bloggers/${b.username}.jpg`; }}
+              />
+            </div>
+            <div className="p-4 flex-1 flex flex-col">
+              <div className="font-semibold text-sm leading-snug">{b.name || `@${b.username}`}</div>
+              <div className="text-xs text-stone-400 mt-0.5">@{b.username}</div>
+              {b.followers && <div className="text-xs text-stone-400 mt-1">{b.followers} 粉丝</div>}
+              <div className="flex gap-2 mt-3">
+                <a
+                  href={b.insUrl || `https://www.instagram.com/${b.username}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 text-center text-xs bg-stone-100 hover:bg-stone-200 rounded-lg py-1.5"
+                >
+                  Ins
+                </a>
+                <button
+                  onClick={() => { setEditing(b); setForm({ username: b.username, name: b.name, bio: b.bio, avatarUrl: b.avatarUrl, coverUrl: b.coverUrl, insUrl: b.insUrl, followers: b.followers }); setAdding(true); }}
+                  className="flex-1 text-xs bg-stone-800 text-white rounded-lg py-1.5"
+                >
+                  编辑
+                </button>
+                <button
+                  onClick={() => remove(b)}
+                  className="text-xs bg-red-50 text-red-600 hover:bg-red-100 rounded-lg py-1.5 px-2"
+                >
+                  删除
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -163,6 +168,15 @@ export default function BloggersPage() {
                   value={form.avatarUrl}
                   onChange={(e) => setForm({ ...form, avatarUrl: e.target.value })}
                   placeholder="/bloggers/xxx.jpg 或 https://..."
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-stone-500 mb-1">代表性家居图（可选，默认 /bloggers/covers/xxx.jpg）</label>
+                <input
+                  value={form.coverUrl}
+                  onChange={(e) => setForm({ ...form, coverUrl: e.target.value })}
+                  placeholder="/bloggers/covers/xxx.jpg 或 https://..."
                   className="w-full border rounded-lg px-3 py-2 text-sm"
                 />
               </div>

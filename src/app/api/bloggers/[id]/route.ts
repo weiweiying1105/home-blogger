@@ -7,7 +7,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   const { id } = await params;
   const body = await req.json();
   const data: Record<string, unknown> = {};
-  for (const key of ["username", "name", "bio", "avatarUrl", "insUrl", "followers", "sortOrder"]) {
+  for (const key of ["username", "name", "bio", "avatarUrl", "coverUrl", "insUrl", "followers", "sortOrder"]) {
     if (key in body) data[key] = body[key];
   }
   if (typeof data.username === "string") {
