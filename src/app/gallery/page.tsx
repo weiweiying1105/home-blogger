@@ -223,10 +223,13 @@ export default function GalleryPage() {
               <h3 className="text-lg font-semibold">选择图片加入「{tree.find((c) => c.id === activeCat)?.name || "当前分类"}」</h3>
               <button onClick={() => setPickerOpen(false)} className="text-stone-400 text-xl">×</button>
             </div>
+            <p className="text-xs text-stone-400 mb-2">可直接 Ctrl+V 粘贴图片（支持微信复制），自动上传并归入当前分类</p>
             <ImagePicker
               selected={selectedIds}
               onChange={onPick}
               multi
+              categoryId={activeCat}
+              onUploaded={() => load()}
             />
           </div>
         </div>

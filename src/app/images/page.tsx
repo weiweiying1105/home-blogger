@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { usePasteUpload } from "@/lib/usePasteUpload";
 
 type ImageItem = {
   id: string;
@@ -20,6 +21,10 @@ export default function ImagesPage() {
   const [activeTag, setActiveTag] = useState("");
   const [aiPreview, setAiPreview] = useState<{ imageId: string; tags: string[] } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const { pasting } = usePasteUpload({
+    onUploaded: () => load(),
+  });
 
   async function load() {
     const [ir, tr] = await Promise.all([
@@ -102,11 +107,12 @@ export default function ImagesPage() {
         />
         <button
           onClick={() => fileRef.current?.click()}
-          disabled={uploading}
+          disabled={uploading || pasting}
           className="bg-stone-800 text-white px-5 py-2 rounded-lg disabled:opacity-50"
         >
-          {uploading ? "上传中..." : "上传图片"}
+          {uploading || pasting ? "上传中..." : "上传图片"}
         </button>
+        <span className="ml-3 text-sm text-stone-400">或直接 Ctrl+V 粘贴图片（支持微信复制）</span>
       </div>
 
       {/* tag 筛选 */}

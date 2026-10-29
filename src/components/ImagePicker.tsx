@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { usePasteUpload } from "@/lib/usePasteUpload";
 
 type ImageItem = {
   id: string;
@@ -14,15 +15,34 @@ export default function ImagePicker({
   selected,
   onChange,
   multi = true,
+  categoryId,
+  onUploaded,
+  pasteUpload = true,
 }: {
   selected: string[];
   onChange: (ids: string[]) => void;
   multi?: boolean;
+  /** 非空时粘贴/上传的图片自动关联到该分类（审美积累用） */
+  categoryId?: string;
+  /** 粘贴上传完成后的回调（拿到新图片 id 列表） */
+  onUploaded?: (imageIds: string[]) => void;
+  /** 是否启用 Ctrl+V 粘贴上传 */
+  pasteUpload?: boolean;
 }) {
   const [images, setImages] = useState<ImageItem[]>([]);
   const [q, setQ] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const { pasting } = usePasteUpload({
+    endpoint: categoryId ? "/api/upload-gallery" : "/api/upload",
+    categoryId,
+    enabled: pasteUpload,
+    onUploaded: (ids) => {
+      load();
+      onUploaded?.(ids);
+    },
+  });
 
   async function load() {
     const r = await fetch("/api/images");
@@ -80,11 +100,14 @@ export default function ImagePicker({
         />
         <button
           onClick={() => fileRef.current?.click()}
-          disabled={uploading}
+          disabled={uploading || pasting}
           className="bg-stone-800 text-white px-3 py-1.5 rounded-lg text-sm disabled:opacity-50"
         >
-          {uploading ? "..." : "上传"}
+          {uploading || pasting ? "..." : "上传"}
         </button>
+        {pasteUpload && (
+          <span className="text-xs text-stone-400 whitespace-nowrap">或 Ctrl+V 粘贴图片</span>
+        )}
       </div>
 
       <div className="grid grid-cols-4 gap-2 max-h-96 overflow-y-auto">
