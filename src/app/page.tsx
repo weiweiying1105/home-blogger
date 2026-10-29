@@ -113,7 +113,7 @@ export default function Home() {
                   <div className="flex gap-2 mt-3 flex-wrap">
                     {p.materials.map(({ image }) => (
                       <img key={image.id} src={image.thumbnail || image.url} alt={image.title}
-                        className="w-24 h-24 object-cover rounded-lg" />
+                        className="w-24 h-24 object-cover rounded-full" />
                     ))}
                   </div>
                 )}
