@@ -7,6 +7,7 @@ type Plan = {
   id: string;
   title: string;
   content: string;
+  element: string;
   status: string;
   materials: { image: { id: string; url: string; thumbnail: string | null; title: string } }[];
 };
@@ -19,23 +20,38 @@ const STATUS_TABS = [
 
 type StatusKey = "draft" | "published" | "all";
 
+const PAGE_SIZE = 10;
+
 export default function Home() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [status, setStatus] = useState<StatusKey>("draft");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  const load = useCallback(async () => {
-    const res = await fetch(`/api/plans?status=${status}`);
-    setPlans(await res.json());
+  const load = useCallback(async (targetPage: number, append: boolean) => {
+    const res = await fetch(`/api/plans?status=${status}&page=${targetPage}&pageSize=${PAGE_SIZE}`);
+    const data = await res.json();
+    setPlans((prev) => (append ? [...prev, ...data.items] : data.items));
+    setPage(targetPage);
+    setHasMore(data.hasMore);
   }, [status]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(1, false); }, [load]);
+
+  async function loadMore() {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    await load(page + 1, true);
+    setLoadingMore(false);
+  }
 
   async function remove(id: string) {
     if (!confirm("删除这条计划？")) return;
     await fetch(`/api/plans/${id}`, { method: "DELETE" });
-    load();
+    load(1, false);
   }
 
   async function toggleStatus(p: Plan) {
@@ -44,7 +60,7 @@ export default function Home() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: p.status === "published" ? "draft" : "published" }),
     });
-    load();
+    load(1, false);
   }
 
   const emptyText =
@@ -84,7 +100,7 @@ export default function Home() {
         <PlanForm
           plan={editing}
           onClose={() => setShowForm(false)}
-          onSaved={() => { setShowForm(false); load(); }}
+          onSaved={() => { setShowForm(false); load(1, false); }}
         />
       )}
 
@@ -108,6 +124,9 @@ export default function Home() {
                     </span>
                   )}
                 </div>
+                {p.element && (
+                  <p className="text-xs text-stone-400 mt-1">元素：{p.element}</p>
+                )}
                 {p.content && <p className="text-sm text-stone-600 mt-1 whitespace-pre-wrap">{p.content}</p>}
                 {p.materials.length > 0 && (
                   <div className="flex gap-2 mt-3 flex-wrap">
@@ -140,6 +159,18 @@ export default function Home() {
           </div>
         ))}
       </div>
+
+      {hasMore && (
+        <div className="flex justify-center mt-6">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="bg-white border px-6 py-2 rounded-lg text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-50"
+          >
+            {loadingMore ? "加载中..." : "加载更多"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

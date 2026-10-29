@@ -7,6 +7,7 @@ type Plan = {
   id: string;
   title: string;
   content: string;
+  element: string;
   materials: { image: { id: string } }[];
 };
 
@@ -21,12 +22,13 @@ export default function PlanForm({
 }) {
   const [title, setTitle] = useState(plan?.title ?? "");
   const [content, setContent] = useState(plan?.content ?? "");
+  const [element, setElement] = useState(plan?.element ?? "");
   const [selected, setSelected] = useState<string[]>(
     plan?.materials.map((m) => m.image.id) ?? []
   );
 
   async function save() {
-    const body = { title, content, imageIds: selected };
+    const body = { title, content, element, imageIds: selected };
     if (plan) {
       await fetch(`/api/plans/${plan.id}`, {
         method: "PATCH",
@@ -67,6 +69,14 @@ export default function PlanForm({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={5}
+            className="w-full border rounded-lg px-3 py-2 mb-4 text-sm"
+          />
+
+          <label className="block text-sm text-stone-500 mb-1">元素</label>
+          <input
+            value={element}
+            onChange={(e) => setElement(e.target.value)}
+            placeholder="如：复古滤镜、侘寂风、奶油色调..."
             className="w-full border rounded-lg px-3 py-2 mb-4 text-sm"
           />
 

@@ -52,6 +52,7 @@ model Plan {
   id          String    @id @default(cuid())
   title       String
   content     String    @default("")
+  element     String    @default("")
   status      String    @default("draft")
   scheduledAt DateTime?
   createdAt   DateTime  @default(now())
