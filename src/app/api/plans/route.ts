@@ -3,8 +3,11 @@ import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const status = searchParams.get("status");
   const plans = await prisma.plan.findMany({
+    where: status && status !== "all" ? { status } : undefined,
     orderBy: { createdAt: "desc" },
     include: { materials: { include: { image: true }, orderBy: { order: "asc" } } },
   });
