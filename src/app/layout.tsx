@@ -36,6 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Gallery
               </Link>
               <Link
+                href="/bloggers"
+                className="block px-3 py-2 rounded-lg text-sm text-stone-700 hover:bg-stone-100 transition"
+              >
+                Bloggers
+              </Link>
+              <Link
                 href="/todos"
                 className="block px-3 py-2 rounded-lg text-sm text-stone-700 hover:bg-stone-100 transition"
               >

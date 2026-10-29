@@ -96,3 +96,16 @@ model ImageTag {
   tag     Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
   @@unique([imageId, tagId])
 }
+
+// 博主（Instagram 韩国家居博主，供灵感溯源）
+model Blogger {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  name      String   @default("")
+  bio       String   @default("")
+  avatarUrl String   @default("")
+  insUrl    String   @default("")
+  followers String   @default("")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
