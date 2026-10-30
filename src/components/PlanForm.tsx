@@ -8,6 +8,7 @@ type Plan = {
   title: string;
   content: string;
   element: string;
+  links: string;
   materials: { image: { id: string } }[];
 };
 
@@ -23,12 +24,13 @@ export default function PlanForm({
   const [title, setTitle] = useState(plan?.title ?? "");
   const [content, setContent] = useState(plan?.content ?? "");
   const [element, setElement] = useState(plan?.element ?? "");
+  const [links, setLinks] = useState(plan?.links ?? "");
   const [selected, setSelected] = useState<string[]>(
     plan?.materials.map((m) => m.image.id) ?? []
   );
 
   async function save() {
-    const body = { title, content, element, imageIds: selected };
+    const body = { title, content, element, links, imageIds: selected };
     if (plan) {
       await fetch(`/api/plans/${plan.id}`, {
         method: "PATCH",
@@ -77,6 +79,15 @@ export default function PlanForm({
             value={element}
             onChange={(e) => setElement(e.target.value)}
             placeholder="如：复古滤镜、侘寂风、奶油色调..."
+            className="w-full border rounded-lg px-3 py-2 mb-4 text-sm"
+          />
+
+          <label className="block text-sm text-stone-500 mb-1">参考链接（可多个，一行一个）</label>
+          <textarea
+            value={links}
+            onChange={(e) => setLinks(e.target.value)}
+            rows={3}
+            placeholder={"https://www.instagram.com/p/xxx/\nhttps://.../"}
             className="w-full border rounded-lg px-3 py-2 mb-4 text-sm"
           />
 

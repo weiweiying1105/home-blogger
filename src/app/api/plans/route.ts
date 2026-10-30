@@ -36,13 +36,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { title, content, element = "", imageIds = [] } = body;
+  const { title, content, element = "", links = "", imageIds = [] } = body;
 
   const plan = await prisma.plan.create({
     data: {
       title,
       content,
       element,
+      links,
       materials: {
         create: imageIds.map((iid: string, i: number) => ({
           imageId: iid,

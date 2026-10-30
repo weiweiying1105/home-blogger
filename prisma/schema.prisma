@@ -53,6 +53,7 @@ model Plan {
   title       String
   content     String    @default("")
   element     String    @default("")
+  links       String    @default("")
   status      String    @default("draft")
   scheduledAt DateTime?
   createdAt   DateTime  @default(now())
