@@ -13,7 +13,16 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { username, name, bio, avatarUrl, coverUrl, homepage, tags, sortOrder } = await req.json();
-    const uname = (username || "").trim().replace(/^@/, "").replace(/\//g, "");
+    // 从账号文本或主页链接解析 Ins id（链接形式自动提取）
+    const extract = (s: unknown): string => {
+      const t = String(s || "").trim().replace(/^@/, "");
+      if (!t) return "";
+      const m = t.match(/instagram\.com\/(?:reels\/|reel\/|p\/)?([A-Za-z0-9._]{1,40})/i);
+      if (m) return m[1];
+      if (/[\/?#]|https?:/.test(t)) return "";
+      return t;
+    };
+    const uname = extract(username) || extract(homepage);
     if (!uname) return NextResponse.json({ error: "账号不能为空" }, { status: 400 });
 
     // 新增去重：库里已有该账号 → 409 友好提示

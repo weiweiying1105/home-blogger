@@ -54,7 +54,29 @@ export default function BloggersPage() {
     setNewTag("");
   }
 
-  /** 校验 Ins 账号是否存在 */
+  /** 从主页链接或纯账号文本中解析 Ins id */
+  function extractInsId(s: string): string {
+    const t = (s || "").trim().replace(/^@/, "");
+    if (!t) return "";
+    const m = t.match(/instagram\.com\/(?:reels\/|reel\/|p\/)?([A-Za-z0-9._]{1,40})/i);
+    if (m) return m[1];
+    if (/[\/?#]|https?:/.test(t)) return ""; // 是链接但无法解析出账号
+    return t; // 纯账号名
+  }
+
+  /** Ins 账号输入：粘贴完整主页链接时自动解析出 id，并顺手带上主页链接 */
+  function onUsernameChange(v: string) {
+    setCheckResult(null);
+    const id = extractInsId(v);
+    setForm((f) => {
+      const next: typeof f = { ...f, username: v };
+      if (id && id !== v.trim().replace(/^@/, "")) {
+        next.username = id;
+        if (!f.homepage) next.homepage = v.trim();
+      }
+      return next;
+    });
+  }
   async function checkAccount() {
     const u = form.username.trim().replace(/^@/, "");
     if (!u) return;
@@ -343,8 +365,8 @@ export default function BloggersPage() {
                 <div className="flex gap-2">
                   <input
                     value={form.username}
-                    onChange={(e) => { setForm({ ...form, username: e.target.value }); setCheckResult(null); }}
-                    placeholder="例如 oneroom.make"
+                    onChange={(e) => onUsernameChange(e.target.value)}
+                    placeholder="Ins 账号或完整主页链接，粘贴链接自动提取账号"
                     className="flex-1 border rounded-lg px-3 py-2 text-sm"
                   />
                   <button
@@ -454,7 +476,19 @@ export default function BloggersPage() {
                 <label className="block text-sm text-stone-500 mb-1">主页链接（可选，默认 Ins 主页）</label>
                 <input
                   value={form.homepage}
-                  onChange={(e) => setForm({ ...form, homepage: e.target.value })}
+                  onChange={(e) => setForm((f) => ({ ...f, homepage: e.target.value }))}
+                  onBlur={() => {
+                    // 主页链接填入后，若账号未填则自动解析出 id
+                    setForm((f) => {
+                      if (f.username) return f;
+                      const id = extractInsId(f.homepage);
+                      if (id && f.homepage.includes("instagram.com")) {
+                        setCheckResult(null);
+                        return { ...f, username: id };
+                      }
+                      return f;
+                    });
+                  }}
                   placeholder="https://www.instagram.com/xxx/ 或官网链接"
                   className="w-full border rounded-lg px-3 py-2 text-sm"
                 />
@@ -472,7 +506,7 @@ export default function BloggersPage() {
                 <label className="block text-sm text-stone-500 mb-1">代表性家居图（可粘贴 / 从图库选 / 上传）</label>
                 <BloggerCoverPicker
                   value={form.coverUrl}
-                  onChange={(url) => setForm({ ...form, coverUrl: url })}
+                  onChange={(url) => setForm((f) => ({ ...f, coverUrl: url }))}
                   fallback={editing ? `/bloggers/covers/${editing.username}.jpg` : undefined}
                 />
               </div>
