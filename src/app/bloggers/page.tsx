@@ -26,12 +26,28 @@ export default function BloggersPage() {
   const [form, setForm] = useState(EMPTY);
   const [orderDrafts, setOrderDrafts] = useState<Record<string, string>>({});
   const [savingOrderId, setSavingOrderId] = useState("");
+  const [newTag, setNewTag] = useState("");
 
   async function load() {
     const r = await fetch("/api/bloggers");
     setBloggers(await r.json());
   }
   useEffect(() => { load(); }, []);
+
+  /** 切换标签选中状态（可多选） */
+  function toggleTag(t: string) {
+    const cur = (form.tags || "").split(",").map((x) => x.trim()).filter(Boolean);
+    const next = cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t];
+    setForm({ ...form, tags: next.join(",") });
+  }
+
+  /** 新增标签：输入后回车或点添加 */
+  function addNewTag() {
+    const t = newTag.trim();
+    if (!t) return;
+    toggleTag(t);
+    setNewTag("");
+  }
 
   async function save() {
     if (!form.username.trim()) return;
@@ -105,7 +121,7 @@ export default function BloggersPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">博主管理</h1>
         <button
-          onClick={() => { setEditing(null); setForm(EMPTY); setAdding(true); }}
+          onClick={() => { setEditing(null); setForm(EMPTY); setNewTag(""); setAdding(true); }}
           className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm"
         >
           + 新增博主
@@ -214,7 +230,7 @@ export default function BloggersPage() {
               </div>
               <div className="flex gap-2 mt-2">
                 <button
-                  onClick={() => { setEditing(b); setForm({ username: b.username, name: b.name, bio: b.bio, avatarUrl: b.avatarUrl, coverUrl: b.coverUrl, homepage: b.homepage, tags: b.tags, sortOrder: String(b.sortOrder) }); setAdding(true); }}
+                  onClick={() => { setEditing(b); setForm({ username: b.username, name: b.name, bio: b.bio, avatarUrl: b.avatarUrl, coverUrl: b.coverUrl, homepage: b.homepage, tags: b.tags, sortOrder: String(b.sortOrder) }); setNewTag(""); setAdding(true); }}
                   className="flex-1 text-xs bg-stone-800 text-white rounded-lg py-1.5"
                 >
                   编辑
@@ -258,13 +274,61 @@ export default function BloggersPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-stone-500 mb-1">标签（逗号分隔，可多选分类）</label>
-                <input
-                  value={form.tags}
-                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                  placeholder="例如 家居, 静物拍摄, 配色"
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                />
+                <label className="block text-sm text-stone-500 mb-1">标签（点击已有标签添加，也可输入新标签）</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {allTags.map((t) => {
+                    const selected = (form.tags || "").split(",").map((x) => x.trim()).filter(Boolean).includes(t);
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => toggleTag(t)}
+                        className={`text-xs px-2.5 py-1 rounded-full border ${
+                          selected
+                            ? "bg-stone-800 text-white border-stone-800"
+                            : "bg-white text-stone-600 border-stone-200"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addNewTag(); } }}
+                    placeholder="输入新标签后回车添加"
+                    className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={addNewTag}
+                    className="px-3 py-2 text-sm bg-stone-100 hover:bg-stone-200 rounded-lg"
+                  >
+                    + 添加
+                  </button>
+                </div>
+                {form.tags && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {form.tags.split(",").map((t) => t.trim()).filter(Boolean).map((t) => (
+                      <span
+                        key={t}
+                        className="inline-flex items-center gap-1 text-xs bg-stone-800 text-white rounded-full px-2.5 py-1"
+                      >
+                        {t}
+                        <button
+                          type="button"
+                          onClick={() => toggleTag(t)}
+                          className="text-white/70 hover:text-white"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-stone-500 mb-1">排序权重（数字越小越靠前，可留空）</label>
