@@ -92,7 +92,7 @@ export default function PlanForm({
           />
 
           <label className="block text-sm text-stone-500 mb-2">参考图</label>
-          <ImagePicker selected={selected} onChange={setSelected} multi manageMode={!!plan} />
+          <ImagePicker selected={selected} onChange={setSelected} multi manageMode />
         </div>
 
         <div className="p-6 border-t flex justify-end gap-2 sticky bottom-0 bg-white">
