@@ -65,10 +65,14 @@ src/
 | `/api/plans`、`/api/plans/[id]` | CRUD | 发布计划，status: draft/published |
 | `/api/tags` | GET/POST | 自由标签 |
 | `/api/todos`、`/api/todos/[id]` | CRUD | 四象限待办，quadrant 1-4 |
+| `/api/bloggers` | GET/POST | 博主库；GET 按 sortOrder asc；POST 自动去重（重复 username 或命中已删除清单返回 409 + 中文提示） |
+| `/api/bloggers/[id]` | PUT/DELETE | 编辑（白名单字段，改 username 前查重）/ 删除（删除前自动写入 DeletedBlogger 黑名单） |
+| `/api/bloggers/check` | GET | `?username=` 多通道校验 Ins 账号是否存在 |
+| `/api/bloggers/deleted` | GET/DELETE | 已删除博主黑名单：GET 列表；DELETE `?username=` 移除（可重新添加） |
 
 ## 数据模型（prisma/schema.prisma）
 
-8 个模型：`Image`、`Category`（树形自引用，parentId）、`CategoryOnImage`、`Plan`、`PlanMaterial`（Plan↔Image 多对多）、`Todo`、`Tag`、`ImageTag`。所有关联均为 `onDelete: Cascade`。ID 是 cuid 字符串。
+9 个模型：`Image`、`Category`（树形自引用，parentId）、`CategoryOnImage`、`Plan`、`PlanMaterial`（Plan↔Image 多对多）、`Todo`、`Tag`、`ImageTag`、`Blogger`、`DeletedBlogger`（博主删除黑名单，username @unique，爬取导入 POST 时自动拦截）。所有关联均为 `onDelete: Cascade`。ID 是 cuid 字符串。
 
 历史数据从 SQLite 迁移时的快照存在 `prisma/seed-data.json`，回放脚本 `scripts/seed-from-json.mjs`（node 直接跑，用于重置/换库）。
 
@@ -77,11 +81,11 @@ src/
 ```
 GitHub: weiweiying1105/home-blogger (main)
    └── push 自动触发 → Vercel 部署 → https://weiyingwillsucceed.xyz
-数据库: Supabase Postgres（us-east-2，项目 ref 见 .env.local）
+数据库: Supabase Postgres（新加坡 ap-southeast-1，项目 ref = qfzmojbijjcefpjlocnj，见 .env 的 DATABASE_URL；.env.local 里的 tbeifiacxettpstyqud 项目已删除失效，勿再使用）
 图片: 腾讯云 COS ap-guangzhou
 ```
 
-**本地 dev 和线上生产连的是同一个 Supabase 库**——本地改数据线上立刻可见（反之亦然）。调试时删数据要小心。
+**本地 dev 和线上生产连的是同一个 Supabase 库（.env 的 qfzmoj 项目）**——本地改数据线上立刻可见（反之亦然）。调试时删数据要小心。
 
 ## 已知问题（接手者优先看这里）
 
@@ -89,13 +93,17 @@ GitHub: weiweiying1105/home-blogger (main)
 2. **孤儿页面 materials**：`src/app/materials/` 还在调 `/api/materials`，但该 API 路由已删、schema 里也没有 Material 模型，导航也没挂它。要么删掉整个目录，要么按需恢复——建议向用户确认后处理。
 3. **无鉴权**：线上站点任何人可访问可写库。个人工具阶段用户已知晓并接受；如果要在公网长期暴露，建议至少加个简单密码。
 4. **`/api/images?category=` 不含子分类**：审美积累页点父分类只显示直接挂在该分类下的图，不聚合子分类的图。这是设计现状，改动前先问用户是否期望父分类聚合显示。
+5. **本地 dev 的 Prisma 连不上库**：Next dev 优先加载 `.env.local`，其 DATABASE_URL 指向已删除的旧 Supabase 项目（tbeifiac），导致 dev 下所有 API 500。临时解法：本地开发前把 `.env` 的 DATABASE_URL 复制覆盖 `.env.local` 的 DATABASE_URL（或删掉 .env.local 里失效值）。
+6. **线上 PUT `/api/bloggers/[id]` 曾稳定 500**（GET/POST 正常）：2026-10-30 在 `[id]/route.ts` 加 try/catch 错误回传 + 编辑查重后线上实测 200 修复；原 500 的精确堆栈不可见（错误被吞），现所有 API 错误都会返回 `{error: msg}` 可读信息。
 
 ## 环境注意事项（Windows）
 
 - dev server 运行时 `prisma generate` 会报 EPERM（query engine DLL 被占用）——先停 dev server 再 generate。
 - 在 git-bash 终端用 curl 发中文 JSON 会变成 GBK 乱码写入库；测试带中文的接口请在浏览器里操作，或写 Node 脚本发请求。
+- **PowerShell 里 `curl.exe -d '{"key":"value"}'` 的双引号可能被吞**（服务端收到非法 JSON 报 500）；发 JSON 请用 node 脚本（fetch）或 `--data-raw` 转义。
 - `prisma/dev.db` 是 SQLite 时代的遗留文件（gitignore 中），已不再使用，勿删——是唯一本地备份。
 - `npx tsc --noEmit` 当前**全绿**，保持这个基准。
+- schema 变更后：`npx prisma db push`（连 .env 的线上库）→ `npx prisma generate` → 构建/推送。
 
 ## 工作流约定
 
