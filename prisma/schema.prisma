@@ -111,3 +111,11 @@ model Blogger {
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 }
+
+// 已删除博主黑名单（用户删除后记录 Ins 账号，后续抓取导入自动跳过）
+model DeletedBlogger {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  reason    String   @default("用户删除")
+  createdAt DateTime @default(now())
+}

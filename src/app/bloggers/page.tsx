@@ -29,6 +29,9 @@ export default function BloggersPage() {
   const [newTag, setNewTag] = useState("");
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState<null | { exists: boolean | null; name?: string; username?: string; reason?: string }>(null);
+  const [saving, setSaving] = useState(false);
+  const [deletedOpen, setDeletedOpen] = useState(false);
+  const [deletedList, setDeletedList] = useState<{ id: string; username: string; createdAt: string }[]>([]);
 
   async function load() {
     const r = await fetch("/api/bloggers");
@@ -83,18 +86,29 @@ export default function BloggersPage() {
       tags: form.tags,
       sortOrder: form.sortOrder === "" ? 0 : Number(form.sortOrder),
     };
-    if (editing) {
-      await fetch(`/api/bloggers/${editing.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } else {
-      await fetch("/api/bloggers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+    setSaving(true);
+    try {
+      const r = editing
+        ? await fetch(`/api/bloggers/${editing.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          })
+        : await fetch("/api/bloggers", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+      const j = await r.json().catch(() => null);
+      if (!r.ok) {
+        alert(j?.error || `保存失败（${r.status}），请稍后重试`);
+        return;
+      }
+    } catch {
+      alert("网络异常，保存失败，请稍后重试");
+      return;
+    } finally {
+      setSaving(false);
     }
     setAdding(false);
     setEditing(null);
@@ -107,19 +121,58 @@ export default function BloggersPage() {
     const v = Number(orderDrafts[b.id]);
     if (Number.isNaN(v)) return;
     setSavingOrderId(b.id);
-    await fetch(`/api/bloggers/${b.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sortOrder: v }),
-    });
-    setSavingOrderId("");
-    load();
+    try {
+      const r = await fetch(`/api/bloggers/${b.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sortOrder: v }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        alert(j?.error || `保存权重失败（${r.status}），请稍后重试`);
+        return;
+      }
+      load();
+    } catch {
+      alert("网络异常，保存权重失败，请稍后重试");
+    } finally {
+      setSavingOrderId("");
+    }
   }
 
   async function remove(b: Blogger) {
-    if (!confirm(`删除博主 @${b.username}？`)) return;
-    await fetch(`/api/bloggers/${b.id}`, { method: "DELETE" });
-    load();
+    if (!confirm(`删除博主 @${b.username}？\n删除后该 Ins 账号将记入“已删除清单”，后续抓取导入会自动跳过。`)) return;
+    try {
+      const r = await fetch(`/api/bloggers/${b.id}`, { method: "DELETE" });
+      const j = await r.json().catch(() => null);
+      if (!r.ok) {
+        alert(j?.error || `删除失败（${r.status}），请稍后重试`);
+        return;
+      }
+      load();
+    } catch {
+      alert("网络异常，删除失败，请稍后重试");
+    }
+  }
+
+  async function loadDeleted() {
+    try {
+      const r = await fetch("/api/bloggers/deleted");
+      if (r.ok) setDeletedList(await r.json());
+    } catch {
+      setDeletedList([]);
+    }
+  }
+
+  async function restoreDeleted(u: string) {
+    if (!confirm(`将 @${u} 移出“已删除清单”？之后抓取到它可以重新添加。`)) return;
+    const r = await fetch(`/api/bloggers/deleted?username=${encodeURIComponent(u)}`, { method: "DELETE" });
+    const j = await r.json().catch(() => null);
+    if (!r.ok) {
+      alert(j?.error || "移除失败，请稍后重试");
+      return;
+    }
+    loadDeleted();
   }
 
   // 全部标签（去重）
@@ -142,12 +195,20 @@ export default function BloggersPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">博主管理</h1>
-        <button
-          onClick={() => { setEditing(null); setForm(EMPTY); setNewTag(""); setAdding(true); }}
-          className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm"
-        >
-          + 新增博主
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setDeletedOpen(true); loadDeleted(); }}
+            className="text-sm text-stone-600 border border-stone-300 px-4 py-2 rounded-lg hover:bg-stone-50"
+          >
+            已删除清单
+          </button>
+          <button
+            onClick={() => { setEditing(null); setForm(EMPTY); setNewTag(""); setAdding(true); }}
+            className="bg-stone-800 text-white px-4 py-2 rounded-lg text-sm"
+          >
+            + 新增博主
+          </button>
+        </div>
       </div>
 
       <div className="mb-4 space-y-3">
@@ -418,10 +479,42 @@ export default function BloggersPage() {
             </div>
             <div className="flex justify-end gap-2 mt-5">
               <button onClick={() => { setAdding(false); setEditing(null); }} className="px-4 py-2 text-sm text-stone-500">取消</button>
-              <button onClick={save} className="px-4 py-2 text-sm bg-stone-800 text-white rounded-lg">
-                保存
+              <button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-stone-800 text-white rounded-lg disabled:opacity-50">
+                {saving ? "保存中..." : "保存"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {deletedOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">已删除博主清单</h3>
+              <button onClick={() => setDeletedOpen(false)} className="text-stone-400 text-xl">×</button>
+            </div>
+            <p className="text-xs text-stone-400 mb-4">这些 Ins 账号是之前删除的，后续抓取导入会自动跳过。移除后即可重新添加。</p>
+            {deletedList.length === 0 ? (
+              <p className="text-stone-400 text-center py-8 text-sm">清单为空</p>
+            ) : (
+              <div className="space-y-2">
+                {deletedList.map((d) => (
+                  <div key={d.id} className="flex items-center justify-between border rounded-lg px-3 py-2">
+                    <div>
+                      <div className="text-sm font-medium">@{d.username}</div>
+                      <div className="text-xs text-stone-400">{new Date(d.createdAt).toLocaleString()}</div>
+                    </div>
+                    <button
+                      onClick={() => restoreDeleted(d.username)}
+                      className="text-xs text-stone-600 border border-stone-300 rounded-lg px-2.5 py-1 hover:bg-stone-50"
+                    >
+                      移除（可重新添加）
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
