@@ -25,23 +25,33 @@ export async function uploadToCOS(
       .jpeg({ quality: 80 })
       .toBuffer();
     thumbnailKey = key.replace(/\.[^.]+$/, "-thumb.jpg");
+    // 原图与缩略图并行上传，减少串行耗时
+    await Promise.all([
+      cos.putObject({
+        Bucket: BUCKET,
+        Region: REGION,
+        Key: thumbnailKey,
+        Body: thumbBuffer,
+        ContentType: "image/jpeg",
+      }),
+      cos.putObject({
+        Bucket: BUCKET,
+        Region: REGION,
+        Key: key,
+        Body: buffer,
+        ContentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
+      }),
+    ]);
+  } catch {
+    // 缩略图生成失败时，退回仅上传原图
     await cos.putObject({
       Bucket: BUCKET,
       Region: REGION,
-      Key: thumbnailKey,
-      Body: thumbBuffer,
-      ContentType: "image/jpeg",
+      Key: key,
+      Body: buffer,
+      ContentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
     });
-  } catch {}
-
-  // 上传原图
-  await cos.putObject({
-    Bucket: BUCKET,
-    Region: REGION,
-    Key: key,
-    Body: buffer,
-    ContentType: `image/${ext === "jpg" ? "jpeg" : ext}`,
-  });
+  }
 
   return {
     url: `${PUBLIC_URL}/${key}`,

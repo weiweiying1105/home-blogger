@@ -14,13 +14,12 @@ export async function POST(req: Request) {
 
   const bytes = Buffer.from(await file.arrayBuffer());
 
-  const uploaded = await uploadToCOS(bytes, file.name);
-
-  // AI 描述（如果配了 ARK_API_KEY）
-  let ai: { description: string; colors: string } = { description: "", colors: "" };
-  try {
-    ai = await describeImage(bytes, "home");
-  } catch {}
+  // COS 上传与 AI 描述并行：AI 慢或失败不影响上传主流程（内部已带 8s 超时）
+  const [uploaded, aiResult] = await Promise.all([
+    uploadToCOS(bytes, file.name),
+    describeImage(bytes, "home").catch(() => ({ description: "", colors: "" })),
+  ]);
+  const ai = aiResult || { description: "", colors: "" };
 
   const image = await prisma.image.create({
     data: {
@@ -33,18 +32,20 @@ export async function POST(req: Request) {
     },
   });
 
-  // 处理标签
+  // 处理标签（并行 upsert）
   const tagNames = tagsRaw.split(",").map((t) => t.trim()).filter(Boolean);
-  for (const name of tagNames) {
-    const tag = await prisma.tag.upsert({
-      where: { name },
-      create: { name },
-      update: {},
-    });
-    await prisma.imageTag.create({
-      data: { imageId: image.id, tagId: tag.id },
-    });
-  }
+  await Promise.all(
+    tagNames.map(async (name) => {
+      const tag = await prisma.tag.upsert({
+        where: { name },
+        create: { name },
+        update: {},
+      });
+      await prisma.imageTag.create({
+        data: { imageId: image.id, tagId: tag.id },
+      });
+    })
+  );
 
   return NextResponse.json({ ...image, tags: tagNames });
 }

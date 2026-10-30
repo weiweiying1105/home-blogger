@@ -10,12 +10,11 @@ type Blogger = {
   bio: string;
   avatarUrl: string;
   coverUrl: string;
-  insUrl: string;
-  followers: string;
+  homepage: string;
   sortOrder: number;
 };
 
-const EMPTY = { username: "", name: "", bio: "", avatarUrl: "", coverUrl: "", insUrl: "", followers: "" };
+const EMPTY = { username: "", name: "", bio: "", avatarUrl: "", coverUrl: "", homepage: "" };
 
 export default function BloggersPage() {
   const [bloggers, setBloggers] = useState<Blogger[]>([]);
@@ -189,18 +188,17 @@ export default function BloggersPage() {
                   </button>
                 </div>
               </div>
-              {b.followers && <div className="text-xs text-stone-400 mt-1">{b.followers} 粉丝</div>}
               <div className="flex gap-2 mt-3">
                 <a
-                  href={b.insUrl || `https://www.instagram.com/${b.username}/`}
+                  href={b.homepage || `https://www.instagram.com/${b.username}/`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex-1 text-center text-xs bg-stone-100 hover:bg-stone-200 rounded-lg py-1.5"
                 >
-                  Ins
+                  主页
                 </a>
                 <button
-                  onClick={() => { setEditing(b); setForm({ username: b.username, name: b.name, bio: b.bio, avatarUrl: b.avatarUrl, coverUrl: b.coverUrl, insUrl: b.insUrl, followers: b.followers }); setAdding(true); }}
+                  onClick={() => { setEditing(b); setForm({ username: b.username, name: b.name, bio: b.bio, avatarUrl: b.avatarUrl, coverUrl: b.coverUrl, homepage: b.homepage }); setAdding(true); }}
                   className="flex-1 text-xs bg-stone-800 text-white rounded-lg py-1.5"
                 >
                   编辑
@@ -244,11 +242,11 @@ export default function BloggersPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-stone-500 mb-1">粉丝数</label>
+                <label className="block text-sm text-stone-500 mb-1">主页链接（可选，默认 Ins 主页）</label>
                 <input
-                  value={form.followers}
-                  onChange={(e) => setForm({ ...form, followers: e.target.value })}
-                  placeholder="例如 110K"
+                  value={form.homepage}
+                  onChange={(e) => setForm({ ...form, homepage: e.target.value })}
+                  placeholder="https://www.instagram.com/xxx/ 或官网链接"
                   className="w-full border rounded-lg px-3 py-2 text-sm"
                 />
               </div>

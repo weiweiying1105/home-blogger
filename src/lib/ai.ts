@@ -23,6 +23,8 @@ export async function describeImage(
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
+      // 8 秒超时：AI 描述只是附加信息，超时快速降级，绝不拖垮上传主流程
+      signal: AbortSignal.timeout(8000),
       body: JSON.stringify({
         model,
         messages: [
@@ -81,6 +83,7 @@ export async function analyzeTags(imageBuffer: Buffer): Promise<string[]> {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
+      signal: AbortSignal.timeout(8000),
       body: JSON.stringify({
         model,
         messages: [

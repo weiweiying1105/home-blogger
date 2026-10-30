@@ -106,8 +106,7 @@ model Blogger {
   bio       String   @default("")
   avatarUrl String   @default("")
   coverUrl  String   @default("")
-  insUrl    String   @default("")
-  followers String   @default("")
+  homepage  String   @default("")
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 }
