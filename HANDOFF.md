@@ -64,7 +64,8 @@ src/
 | `/api/upload-gallery` | POST | 上传到 COS，可选 `categoryId`（审美积累页用） |
 | `/api/plans`、`/api/plans/[id]` | CRUD | 发布计划，status: draft/published |
 | `/api/tags` | GET/POST | 自由标签 |
-| `/api/todos`、`/api/todos/[id]` | CRUD | 四象限待办，quadrant 1-4 |
+| `/api/todos`、`/api/todos/[id]` | CRUD | 四象限待办，quadrant 1-4；GET 按 order asc，POST 创建时 order=象限内现有条数 |
+| `/api/todos/reorder` | POST | 拖拽排序批量提交 `{items:[{id,quadrant,order}]}`，事务一次更新；前端拖拽跨象限+象限内排序 |
 | `/api/bloggers` | GET/POST | 博主库；GET 按 sortOrder asc；POST 自动去重（重复 username 或命中已删除清单返回 409 + 中文提示）；username 支持填完整 Ins 主页链接（自动提取账号），未填 username 时从 homepage 兜底解析 |
 | `/api/bloggers/[id]` | PUT/DELETE | 编辑（白名单字段，改 username 前查重）/ 删除（删除前自动写入 DeletedBlogger 黑名单） |
 | `/api/bloggers/check` | GET | `?username=` 多通道校验 Ins 账号是否存在 |
