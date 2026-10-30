@@ -27,6 +27,8 @@ export default function BloggersPage() {
   const [orderDrafts, setOrderDrafts] = useState<Record<string, string>>({});
   const [savingOrderId, setSavingOrderId] = useState("");
   const [newTag, setNewTag] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [checkResult, setCheckResult] = useState<null | { exists: boolean | null; name?: string; username?: string; reason?: string }>(null);
 
   async function load() {
     const r = await fetch("/api/bloggers");
@@ -49,8 +51,28 @@ export default function BloggersPage() {
     setNewTag("");
   }
 
+  /** 校验 Ins 账号是否存在 */
+  async function checkAccount() {
+    const u = form.username.trim().replace(/^@/, "");
+    if (!u) return;
+    setChecking(true);
+    setCheckResult(null);
+    try {
+      const r = await fetch(`/api/bloggers/check?username=${encodeURIComponent(u)}`);
+      setCheckResult(await r.json());
+    } catch {
+      setCheckResult({ exists: null, reason: "网络异常，请稍后重试" });
+    }
+    setChecking(false);
+  }
+
   async function save() {
     if (!form.username.trim()) return;
+    // 刚校验过且明确不存在时阻止保存
+    if (checkResult?.exists === false) {
+      alert("该 Ins 账号校验为不存在，请核对账号，或重新校验后再保存");
+      return;
+    }
     const payload = {
       username: form.username,
       name: form.name,
@@ -257,12 +279,39 @@ export default function BloggersPage() {
             <div className="space-y-3">
               <div>
                 <label className="block text-sm text-stone-500 mb-1">Ins 账号（必填）</label>
-                <input
-                  value={form.username}
-                  onChange={(e) => setForm({ ...form, username: e.target.value })}
-                  placeholder="例如 oneroom.make"
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                />
+                <div className="flex gap-2">
+                  <input
+                    value={form.username}
+                    onChange={(e) => { setForm({ ...form, username: e.target.value }); setCheckResult(null); }}
+                    placeholder="例如 oneroom.make"
+                    className="flex-1 border rounded-lg px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={checkAccount}
+                    disabled={checking || !form.username.trim()}
+                    className="px-3 py-2 text-sm bg-stone-100 hover:bg-stone-200 rounded-lg whitespace-nowrap disabled:opacity-50"
+                  >
+                    {checking ? "校验中..." : "校验账号"}
+                  </button>
+                </div>
+                {checkResult && (
+                  <p
+                    className={`mt-1.5 text-xs ${
+                      checkResult.exists === true
+                        ? "text-green-600"
+                        : checkResult.exists === false
+                          ? "text-red-600"
+                          : "text-amber-600"
+                    }`}
+                  >
+                    {checkResult.exists === true
+                      ? `✓ 账号存在：${checkResult.name || checkResult.username}`
+                      : checkResult.exists === false
+                        ? "✗ 账号不存在，请检查拼写"
+                        : `⚠ 无法确认：${checkResult.reason}`}
+                  </p>
+                )}
               </div>
               <div>
                 <label className="block text-sm text-stone-500 mb-1">名字 / 简介</label>
