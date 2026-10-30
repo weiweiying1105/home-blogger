@@ -8,6 +8,7 @@ type Todo = {
   note: string;
   quadrant: number;
   done: boolean;
+  order: number;
 };
 
 const QUADRANTS = [
@@ -25,6 +26,8 @@ export default function TodosPage() {
     title: "",
     note: "",
   });
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [beforeId, setBeforeId] = useState<string | null>(null);
 
   async function load() {
     const r = await fetch("/api/todos");
@@ -58,13 +61,50 @@ export default function TodosPage() {
     load();
   }
 
+  /** 拖拽落位：quadrant 为目标象限，beforeId 为空则追加到该象限末尾 */
+  function handleDrop(quadrant: number, before: string | null) {
+    if (!dragId) return;
+    const dragged = todos.find((t) => t.id === dragId);
+    if (!dragged) return;
+    const rest = todos.filter((t) => t.id !== dragId);
+    const moved = { ...dragged, quadrant };
+    const targetList = rest.filter((t) => t.quadrant === quadrant);
+    let idx = before ? targetList.findIndex((t) => t.id === before) : -1;
+    if (idx < 0) idx = targetList.length;
+    targetList.splice(idx, 0, moved);
+    // 源象限与目标象限的最终顺序，一次批量提交
+    const items: { id: string; quadrant: number; order: number }[] = [];
+    for (const q of new Set([dragged.quadrant, quadrant])) {
+      const list = q === quadrant ? targetList : rest.filter((t) => t.quadrant === q);
+      list.forEach((t, i) => items.push({ id: t.id, quadrant: q, order: i }));
+    }
+    setDragId(null);
+    setBeforeId(null);
+    fetch("/api/todos/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    })
+      .then((r) => { if (!r.ok) load(); return r.json(); })
+      .then((j) => { if (j?.ok) load(); })
+      .catch(() => load());
+  }
+
   return (
     <div>
+      <p className="text-xs text-stone-400 mb-4">拖拽事项可跨象限调整优先级，拖到同象限内可调整先后顺序</p>
       <div className="grid grid-cols-2 gap-4">
         {QUADRANTS.map((q) => {
-          const list = todos.filter((t) => t.quadrant === q.n);
+          const list = todos
+            .filter((t) => t.quadrant === q.n)
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
           return (
-            <div key={q.n} className={`rounded-xl border ${q.color} p-4`}>
+            <div
+              key={q.n}
+              onDragOver={(e) => { e.preventDefault(); setBeforeId(null); }}
+              onDrop={(e) => { e.preventDefault(); handleDrop(q.n, null); }}
+              className={`rounded-xl border ${q.color} p-4 ${dragId ? "min-h-40" : ""}`}
+            >
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h3 className={`font-semibold ${q.head}`}>{q.title}</h3>
@@ -112,7 +152,14 @@ export default function TodosPage() {
                 {list.map((t) => (
                   <div
                     key={t.id}
-                    className="bg-white rounded-lg p-2.5 shadow-sm group"
+                    draggable
+                    onDragStart={(e) => { e.dataTransfer.effectAllowed = "move"; setDragId(t.id); }}
+                    onDragEnd={() => { setDragId(null); setBeforeId(null); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setBeforeId(t.id); }}
+                    onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDrop(q.n, t.id); }}
+                    className={`bg-white rounded-lg p-2.5 shadow-sm group cursor-grab active:cursor-grabbing ${
+                      dragId === t.id ? "opacity-40" : beforeId === t.id ? "ring-2 ring-stone-400" : ""
+                    }`}
                   >
                     <div className="flex items-start gap-2">
                       <input
