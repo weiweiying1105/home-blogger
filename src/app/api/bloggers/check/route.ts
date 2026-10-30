@@ -110,5 +110,27 @@ export async function GET(req: Request) {
     // 继续
   }
 
+  // ---- 通道 D：必应搜索收录验证 ----
+  try {
+    const res = await timedFetch(
+      `https://www.bing.com/search?q=%22instagram.com%2F${username}%2F%22&setlang=en-us`,
+      { headers: { "User-Agent": UA, "Accept-Language": "en-US,en;q=0.9" } },
+      8000
+    );
+    if (res.ok) {
+      const html = await res.text();
+      if (html.includes(`instagram.com/${username}/`)) {
+        // 命中即确认存在；显示名尝试从结果标题提取，失败则用账号名
+        const t = html.match(/<h2[^>]*>([^<]{1,120})<\/h2>/i);
+        const name = t?.[1]?.replace(/<[^>]+>/g, "").trim() || username;
+        return NextResponse.json({ exists: true, name: name.replace(/ - \d+ (posts|K posts).*/i, "").trim() || username, username });
+      }
+      // 未命中：不直接判不存在（可能未收录），提示风险
+      return NextResponse.json({ exists: null, reason: "公开搜索未找到该账号（可能拼写有误或账号未被收录），请核对" });
+    }
+  } catch {
+    // 继续
+  }
+
   return NextResponse.json({ exists: null, reason: "暂时无法确认（Instagram 网络受限），请手动打开账号核对" });
 }
