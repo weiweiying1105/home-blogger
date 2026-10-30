@@ -107,6 +107,7 @@ model Blogger {
   avatarUrl String   @default("")
   coverUrl  String   @default("")
   homepage  String   @default("")
+  tags      String   @default("")
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 }

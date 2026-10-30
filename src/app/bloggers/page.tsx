@@ -11,20 +11,21 @@ type Blogger = {
   avatarUrl: string;
   coverUrl: string;
   homepage: string;
+  tags: string;
   sortOrder: number;
 };
 
-const EMPTY = { username: "", name: "", bio: "", avatarUrl: "", coverUrl: "", homepage: "" };
+const EMPTY = { username: "", name: "", bio: "", avatarUrl: "", coverUrl: "", homepage: "", tags: "", sortOrder: "" };
 
 export default function BloggersPage() {
   const [bloggers, setBloggers] = useState<Blogger[]>([]);
   const [q, setQ] = useState("");
+  const [activeTag, setActiveTag] = useState("");
   const [editing, setEditing] = useState<Blogger | null>(null);
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState(EMPTY);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [overIdx, setOverIdx] = useState<number | null>(null);
-  const [savingOrder, setSavingOrder] = useState(false);
+  const [orderDrafts, setOrderDrafts] = useState<Record<string, string>>({});
+  const [savingOrderId, setSavingOrderId] = useState("");
 
   async function load() {
     const r = await fetch("/api/bloggers");
@@ -32,59 +33,48 @@ export default function BloggersPage() {
   }
   useEffect(() => { load(); }, []);
 
-  /** 按新顺序批量保存 sortOrder（喜欢的博主排前面，自动保存） */
-  async function saveOrder(newVisible: Blogger[]) {
-    setSavingOrder(true);
-    // 保持全表位置骨架，仅替换可见卡片顺序
-    const pos = new Map(newVisible.map((b, i) => [b.id, b]));
-    const full = bloggers.map((b) => (pos.has(b.id) ? pos.get(b.id)! : b));
-    const reordered = full.map((b, i) => ({ ...b, sortOrder: i }));
-    setBloggers(reordered);
-    const chunks = [];
-    for (let i = 0; i < reordered.length; i += 5) chunks.push(reordered.slice(i, i + 5));
-    for (const chunk of chunks) {
-      await Promise.all(
-        chunk.map((b) =>
-          fetch(`/api/bloggers/${b.id}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sortOrder: b.sortOrder }),
-          })
-        )
-      );
-    }
-    setSavingOrder(false);
-    load();
-  }
-
-  /** 上移/下移一位 */
-  function move(index: number, dir: -1 | 1) {
-    const target = index + dir;
-    if (target < 0 || target >= filtered.length) return;
-    const list = [...filtered];
-    const [m] = list.splice(index, 1);
-    list.splice(target, 0, m);
-    saveOrder(list);
-  }
-
   async function save() {
     if (!form.username.trim()) return;
+    const payload = {
+      username: form.username,
+      name: form.name,
+      bio: form.bio,
+      avatarUrl: form.avatarUrl,
+      coverUrl: form.coverUrl,
+      homepage: form.homepage,
+      tags: form.tags,
+      sortOrder: form.sortOrder === "" ? 0 : Number(form.sortOrder),
+    };
     if (editing) {
       await fetch(`/api/bloggers/${editing.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
     } else {
       await fetch("/api/bloggers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
     }
     setAdding(false);
     setEditing(null);
     setForm(EMPTY);
+    load();
+  }
+
+  /** 只更新单个博主的排序权重（数字越小越靠前），只调一个接口 */
+  async function saveOrder(b: Blogger) {
+    const v = Number(orderDrafts[b.id]);
+    if (Number.isNaN(v)) return;
+    setSavingOrderId(b.id);
+    await fetch(`/api/bloggers/${b.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sortOrder: v }),
+    });
+    setSavingOrderId("");
     load();
   }
 
@@ -94,9 +84,21 @@ export default function BloggersPage() {
     load();
   }
 
-  const filtered = bloggers.filter((b) =>
-    !q || b.username.toLowerCase().includes(q.toLowerCase()) || b.name.includes(q)
-  );
+  // 全部标签（去重）
+  const allTags = Array.from(
+    new Set(
+      bloggers
+        .flatMap((b) => (b.tags || "").split(",").map((t) => t.trim()).filter(Boolean))
+    )
+  ).sort();
+
+  const filtered = bloggers.filter((b) => {
+    const okQ =
+      !q || b.username.toLowerCase().includes(q.toLowerCase()) || b.name.includes(q);
+    const okTag =
+      !activeTag || (b.tags || "").split(",").map((t) => t.trim()).includes(activeTag);
+    return okQ && okTag;
+  });
 
   return (
     <div>
@@ -110,47 +112,50 @@ export default function BloggersPage() {
         </button>
       </div>
 
-      <div className="mb-4 flex items-center gap-3 flex-wrap">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="搜索账号名或名字..."
-          className="w-full max-w-sm border rounded-lg px-3 py-2 text-sm"
-        />
-        <span className="text-xs text-stone-400">拖动卡片或 ▲▼ 调整排序（喜欢的博主放前面，自动保存）</span>
+      <div className="mb-4 space-y-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="搜索账号名或名字..."
+            className="w-full max-w-sm border rounded-lg px-3 py-2 text-sm"
+          />
+          <span className="text-xs text-stone-400">权重数字越小越靠前，改单个不牵连其它</span>
+        </div>
+        {allTags.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveTag("")}
+              className={`text-xs px-3 py-1 rounded-full border ${
+                !activeTag ? "bg-stone-800 text-white border-stone-800" : "bg-white text-stone-600 border-stone-200"
+              }`}
+            >
+              全部
+            </button>
+            {allTags.map((t) => (
+              <button
+                key={t}
+                onClick={() => setActiveTag(activeTag === t ? "" : t)}
+                className={`text-xs px-3 py-1 rounded-full border ${
+                  activeTag === t ? "bg-stone-800 text-white border-stone-800" : "bg-white text-stone-600 border-stone-200"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {filtered.length === 0 && (
         <p className="text-stone-400 text-center py-10">暂无博主</p>
       )}
 
-      {savingOrder && (
-        <div className="fixed bottom-4 right-4 bg-stone-800 text-white text-xs px-3 py-2 rounded-lg shadow z-50">
-          排序保存中...
-        </div>
-      )}
-
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {filtered.map((b, idx) => (
           <div
             key={b.id}
-            draggable
-            onDragStart={() => setDragIdx(idx)}
-            onDragOver={(e) => { e.preventDefault(); setOverIdx(idx); }}
-            onDrop={() => {
-              if (dragIdx !== null && dragIdx !== idx) {
-                const list = [...filtered];
-                const [m] = list.splice(dragIdx, 1);
-                list.splice(idx, 0, m);
-                saveOrder(list);
-              }
-              setDragIdx(null);
-              setOverIdx(null);
-            }}
-            onDragEnd={() => { setDragIdx(null); setOverIdx(null); }}
-            className={`bg-white rounded-xl border overflow-hidden flex flex-col cursor-grab active:cursor-grabbing transition ${
-              overIdx === idx ? "border-stone-800 border-2" : "border-stone-200"
-            }`}
+            className="bg-white rounded-xl border border-stone-200 overflow-hidden flex flex-col"
           >
             <div className="aspect-[4/3] bg-stone-100 overflow-hidden relative">
               <img
@@ -164,31 +169,40 @@ export default function BloggersPage() {
               </span>
             </div>
             <div className="p-4 flex-1 flex flex-col">
-              <div className="flex items-start justify-between gap-1">
-                <div className="min-w-0">
-                  <div className="font-semibold text-sm leading-snug">{b.name || `@${b.username}`}</div>
-                  <div className="text-xs text-stone-400 mt-0.5">@{b.username}</div>
-                </div>
-                <div className="flex flex-col shrink-0">
-                  <button
-                    onClick={() => move(idx, -1)}
-                    disabled={idx === 0}
-                    title="上移"
-                    className="text-stone-400 hover:text-stone-800 disabled:opacity-30 text-xs leading-none px-1"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    onClick={() => move(idx, 1)}
-                    disabled={idx === filtered.length - 1}
-                    title="下移"
-                    className="text-stone-400 hover:text-stone-800 disabled:opacity-30 text-xs leading-none px-1 mt-0.5"
-                  >
-                    ▼
-                  </button>
-                </div>
+              <div className="min-w-0">
+                <div className="font-semibold text-sm leading-snug">{b.name || `@${b.username}`}</div>
+                <div className="text-xs text-stone-400 mt-0.5">@{b.username}</div>
               </div>
-              <div className="flex gap-2 mt-3">
+              {b.tags && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {b.tags.split(",").map((t) => t.trim()).filter(Boolean).map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => setActiveTag(activeTag === t ? "" : t)}
+                      className={`text-[10px] px-2 py-0.5 rounded-full ${
+                        activeTag === t ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-600"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 mt-3">
+                <input
+                  type="number"
+                  value={orderDrafts[b.id] ?? String(b.sortOrder)}
+                  onChange={(e) => setOrderDrafts({ ...orderDrafts, [b.id]: e.target.value })}
+                  title="排序权重，越小越靠前"
+                  className="w-16 border rounded-lg px-2 py-1 text-xs"
+                />
+                <button
+                  onClick={() => saveOrder(b)}
+                  disabled={savingOrderId === b.id}
+                  className="text-xs bg-stone-100 hover:bg-stone-200 rounded-lg py-1.5 px-2.5 disabled:opacity-50"
+                >
+                  {savingOrderId === b.id ? "保存中" : "保存权重"}
+                </button>
                 <a
                   href={b.homepage || `https://www.instagram.com/${b.username}/`}
                   target="_blank"
@@ -197,8 +211,10 @@ export default function BloggersPage() {
                 >
                   主页
                 </a>
+              </div>
+              <div className="flex gap-2 mt-2">
                 <button
-                  onClick={() => { setEditing(b); setForm({ username: b.username, name: b.name, bio: b.bio, avatarUrl: b.avatarUrl, coverUrl: b.coverUrl, homepage: b.homepage }); setAdding(true); }}
+                  onClick={() => { setEditing(b); setForm({ username: b.username, name: b.name, bio: b.bio, avatarUrl: b.avatarUrl, coverUrl: b.coverUrl, homepage: b.homepage, tags: b.tags, sortOrder: String(b.sortOrder) }); setAdding(true); }}
                   className="flex-1 text-xs bg-stone-800 text-white rounded-lg py-1.5"
                 >
                   编辑
@@ -217,7 +233,7 @@ export default function BloggersPage() {
 
       {adding && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">{editing ? "编辑博主" : "新增博主"}</h3>
               <button onClick={() => { setAdding(false); setEditing(null); }} className="text-stone-400 text-xl">×</button>
@@ -238,6 +254,25 @@ export default function BloggersPage() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="博主显示名或简介"
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-stone-500 mb-1">标签（逗号分隔，可多选分类）</label>
+                <input
+                  value={form.tags}
+                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                  placeholder="例如 家居, 静物拍摄, 配色"
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-stone-500 mb-1">排序权重（数字越小越靠前，可留空）</label>
+                <input
+                  type="number"
+                  value={form.sortOrder ?? ""}
+                  onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
+                  placeholder="默认 0"
                   className="w-full border rounded-lg px-3 py-2 text-sm"
                 />
               </div>

@@ -11,7 +11,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { username, name, bio, avatarUrl, coverUrl, homepage, sortOrder } = await req.json();
+  const { username, name, bio, avatarUrl, coverUrl, homepage, tags, sortOrder } = await req.json();
   const uname = (username || "").trim().replace(/^@/, "").replace(/\//g, "");
   if (!uname) return NextResponse.json({ error: "账号不能为空" }, { status: 400 });
   const blogger = await prisma.blogger.create({
@@ -22,6 +22,7 @@ export async function POST(req: Request) {
       avatarUrl: avatarUrl || `/bloggers/${uname}.jpg`,
       coverUrl: coverUrl || "",
       homepage: homepage || `https://www.instagram.com/${uname}/`,
+      tags: tags || "",
       sortOrder: sortOrder || 0,
     },
   });
