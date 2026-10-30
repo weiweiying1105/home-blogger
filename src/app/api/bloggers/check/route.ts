@@ -119,11 +119,16 @@ export async function GET(req: Request) {
     );
     if (res.ok) {
       const html = await res.text();
-      if (html.includes(`instagram.com/${username}/`)) {
-        // 命中即确认存在；显示名尝试从结果标题提取，失败则用账号名
+      // 只匹配真实结果链接（href 中含 instagram.com/{username} 精确段），避免搜索框回显误判
+      const esc = username.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const linkRe = new RegExp(`instagram\\.com/${esc}(/|["'&\\s<])`, "i");
+      const links = html.match(/href="([^"]+)"/gi) || [];
+      const hit = links.some((l) => linkRe.test(l));
+      if (hit) {
+        // 尝试从结果标题提取显示名，失败则用账号名
         const t = html.match(/<h2[^>]*>([^<]{1,120})<\/h2>/i);
-        const name = t?.[1]?.replace(/<[^>]+>/g, "").trim() || username;
-        return NextResponse.json({ exists: true, name: name.replace(/ - \d+ (posts|K posts).*/i, "").trim() || username, username });
+        const name = t?.[1]?.replace(/<[^>]+>/g, "").replace(/ - \d+.*$/i, "").trim() || username;
+        return NextResponse.json({ exists: true, name: name || username, username });
       }
       // 未命中：不直接判不存在（可能未收录），提示风险
       return NextResponse.json({ exists: null, reason: "公开搜索未找到该账号（可能拼写有误或账号未被收录），请核对" });
