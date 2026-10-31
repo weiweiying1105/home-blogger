@@ -47,6 +47,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Todos
               </Link>
+              <Link
+                href="/notes"
+                className="block px-3 py-2 rounded-lg text-sm text-stone-700 hover:bg-stone-100 transition"
+              >
+                Notes
+              </Link>
             </nav>
           </aside>
           {/* 主内容 */}
