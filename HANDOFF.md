@@ -66,6 +66,7 @@ src/
 | `/api/tags` | GET/POST | 自由标签 |
 | `/api/todos`、`/api/todos/[id]` | CRUD | 四象限待办，quadrant 1-4；GET 按 order asc，POST 创建时 order=象限内现有条数 |
 | `/api/todos/reorder` | POST | 拖拽排序批量提交 `{items:[{id,quadrant,order}]}`，事务一次更新；前端拖拽跨象限+象限内排序 |
+| `/api/notes`、`/api/notes/[id]` | CRUD | 笔记：title/content(Markdown)/category(单层分类)；GET 列表只返回元信息（不含 content），详情走 [id] |
 | `/api/bloggers` | GET/POST | 博主库；GET 按 sortOrder asc；POST 自动去重（重复 username 或命中已删除清单返回 409 + 中文提示）；username 支持填完整 Ins 主页链接（自动提取账号），未填 username 时从 homepage 兜底解析 |
 | `/api/bloggers/[id]` | PUT/DELETE | 编辑（白名单字段，改 username 前查重）/ 删除（删除前自动写入 DeletedBlogger 黑名单） |
 | `/api/bloggers/check` | GET | `?username=` 多通道校验 Ins 账号是否存在 |
@@ -73,7 +74,9 @@ src/
 
 ## 数据模型（prisma/schema.prisma）
 
-9 个模型：`Image`、`Category`（树形自引用，parentId）、`CategoryOnImage`、`Plan`、`PlanMaterial`（Plan↔Image 多对多）、`Todo`、`Tag`、`ImageTag`、`Blogger`、`DeletedBlogger`（博主删除黑名单，username @unique，爬取导入 POST 时自动拦截）。所有关联均为 `onDelete: Cascade`。ID 是 cuid 字符串。
+9 个模型：`Image`、`Category`（树形自引用，parentId）、`CategoryOnImage`、`Plan`、`PlanMaterial`（Plan↔Image 多对多）、`Todo`、`Tag`、`ImageTag`、`Blogger`、`DeletedBlogger`（博主删除黑名单，username @unique，爬取导入 POST 时自动拦截）、`Note`（笔记：title/content(Markdown)/category 单层分类）。所有关联均为 `onDelete: Cascade`。ID 是 cuid 字符串。
+
+笔记前端：`/notes`（列表+分类 pills 筛选）、`/notes/new` 与 `/notes/[id]/edit`（共用 `src/components/NoteEditor.tsx` 双栏编辑+实时预览）、`/notes/[id]`（详情，`src/components/NoteRenderer.tsx` 用 react-markdown + remark-gfm 渲染，安全转义 HTML）。
 
 历史数据从 SQLite 迁移时的快照存在 `prisma/seed-data.json`，回放脚本 `scripts/seed-from-json.mjs`（node 直接跑，用于重置/换库）。
 
