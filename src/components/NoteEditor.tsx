@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import NoteRenderer from "./NoteRenderer";
+import HtmlPreview, { isHtml } from "./HtmlPreview";
 
-// 站内 Markdown 编辑器：左侧书写 + 右侧实时预览
+// 站内笔记编辑器：左侧书写 + 右侧实时预览；支持 Markdown 与 HTML 两种输入，右侧分别渲染成文档/网页
 export default function NoteEditor({
   initial,
   categories,
@@ -18,6 +19,9 @@ export default function NoteEditor({
   const [category, setCategory] = useState(initial?.category || "");
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [mode, setMode] = useState<"md" | "html">(
+    initial && isHtml(initial.content) ? "html" : "md"
+  );
 
   // Ctrl+S / Cmd+S：阻止浏览器默认保存页面，改为保存笔记
   function onKeyDown(e: React.KeyboardEvent) {
@@ -89,17 +93,53 @@ export default function NoteEditor({
         </div>
       </div>
 
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setMode("md")}
+          className={`px-3 py-1.5 rounded-lg text-sm border ${
+            mode === "md"
+              ? "bg-stone-800 text-white border-stone-800"
+              : "text-stone-600 hover:bg-stone-100"
+          }`}
+        >
+          Markdown
+        </button>
+        <button
+          onClick={() => setMode("html")}
+          className={`px-3 py-1.5 rounded-lg text-sm border ${
+            mode === "html"
+              ? "bg-stone-800 text-white border-stone-800"
+              : "text-stone-600 hover:bg-stone-100"
+          }`}
+        >
+          HTML
+        </button>
+        <span className="text-xs text-stone-400">
+          {mode === "md" ? "Markdown 文档" : "HTML 网页，右侧实时预览"}
+        </span>
+      </div>
+
       <div className={`grid gap-4 items-start ${showPreview ? "grid-cols-2" : "grid-cols-1"}`}>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={"# 支持 Markdown\n\n- 任务清单 `- [ ]`\n- **加粗**、*斜体*\n\n```js\n代码块\n```\n\n> 引用\n\n| 表格 | 列 |\n| --- | --- |\n| a | b |"}
+          placeholder={
+            mode === "md"
+              ? "# 支持 Markdown\n\n- 任务清单 `- [ ]`\n- **加粗**、*斜体*\n\n```js\n代码块\n```\n\n> 引用\n\n| 表格 | 列 |\n| --- | --- |\n| a | b |"
+              : "<!DOCTYPE html>\n<html>\n<head>\n  <style>body { font-family: sans-serif; }</style>\n</head>\n<body>\n  <h1>我的网页</h1>\n  <p>右侧实时预览效果</p>\n</body>\n</html>"
+          }
           className="w-full h-[70vh] border rounded-lg p-4 font-mono text-sm leading-6 outline-none focus:ring-2 focus:ring-stone-300 resize-y"
           spellCheck={false}
         />
         {showPreview && (
-          <div className="w-full h-[70vh] overflow-y-auto border rounded-lg p-6 bg-white">
-            <NoteRenderer content={content} />
+          <div className="w-full min-h-[70vh] overflow-y-auto border rounded-lg bg-white">
+            {mode === "md" ? (
+              <div className="p-6">
+                <NoteRenderer content={content} />
+              </div>
+            ) : (
+              <HtmlPreview html={content} />
+            )}
           </div>
         )}
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import NoteRenderer from "@/components/NoteRenderer";
+import HtmlPreview, { isHtml } from "@/components/HtmlPreview";
 
 type Note = {
   id: string;
@@ -62,7 +63,11 @@ export default function NoteDetailPage() {
         <button onClick={remove} className="text-red-400 hover:text-red-600 px-2">删除</button>
       </div>
       <article className="bg-white rounded-xl border border-stone-200 p-8">
-        <NoteRenderer content={note.content} />
+        {isHtml(note.content) ? (
+          <HtmlPreview html={note.content} />
+        ) : (
+          <NoteRenderer content={note.content} />
+        )}
       </article>
     </div>
   );
