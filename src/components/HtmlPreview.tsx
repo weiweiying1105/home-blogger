@@ -22,6 +22,7 @@ export default function HtmlPreview({
     if (!f) return;
     try {
       const h = f.contentDocument?.body?.scrollHeight;
+      // 内容高于保底值时按内容撑高；否则保持最短高度，避免预览区下方留白
       if (h && h > 0) f.style.height = h + "px";
     } catch {
       /* 跨源或未就绪时保持原高度 */

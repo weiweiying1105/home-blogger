@@ -138,7 +138,7 @@ export default function NoteEditor({
                 <NoteRenderer content={content} />
               </div>
             ) : (
-              <HtmlPreview html={content} />
+              <HtmlPreview html={content} className="min-h-[70vh]" />
             )}
           </div>
         )}
