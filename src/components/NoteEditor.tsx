@@ -17,6 +17,15 @@ export default function NoteEditor({
   const [content, setContent] = useState(initial?.content || "");
   const [category, setCategory] = useState(initial?.category || "");
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+
+  // Ctrl+S / Cmd+S：阻止浏览器默认保存页面，改为保存笔记
+  function onKeyDown(e: React.KeyboardEvent) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      save();
+    }
+  }
 
   async function save() {
     if (!title.trim()) {
@@ -43,7 +52,7 @@ export default function NoteEditor({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onKeyDown={onKeyDown}>
       <div className="flex items-center justify-between">
         <input
           value={title}
@@ -52,6 +61,12 @@ export default function NoteEditor({
           className="w-1/2 text-xl font-semibold border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-stone-300"
         />
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPreview(!showPreview)}
+            className="border rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-stone-100"
+          >
+            {showPreview ? "隐藏成品" : "显示成品"}
+          </button>
           <input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -74,7 +89,7 @@ export default function NoteEditor({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 items-start">
+      <div className={`grid gap-4 items-start ${showPreview ? "grid-cols-2" : "grid-cols-1"}`}>
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
@@ -82,9 +97,11 @@ export default function NoteEditor({
           className="w-full h-[70vh] border rounded-lg p-4 font-mono text-sm leading-6 outline-none focus:ring-2 focus:ring-stone-300 resize-y"
           spellCheck={false}
         />
-        <div className="w-full h-[70vh] overflow-y-auto border rounded-lg p-6 bg-white">
-          <NoteRenderer content={content} />
-        </div>
+        {showPreview && (
+          <div className="w-full h-[70vh] overflow-y-auto border rounded-lg p-6 bg-white">
+            <NoteRenderer content={content} />
+          </div>
+        )}
       </div>
     </div>
   );
