@@ -44,7 +44,7 @@ export default function NoteDetailPage() {
   if (!note) return <p className="text-stone-400 mt-10">加载中...</p>;
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full">
       <div className="flex items-center gap-3 mb-2">
         <button onClick={() => router.back()} className="text-stone-400 hover:text-stone-800 text-xl">←</button>
         <h1 className="text-2xl font-bold text-stone-900">{note.title}</h1>
