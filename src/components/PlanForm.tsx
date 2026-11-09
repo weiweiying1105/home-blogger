@@ -10,6 +10,7 @@ type Plan = {
   element: string;
   links: string;
   paid?: boolean | null;
+  isCommercial?: boolean;
   materials: { image: { id: string } }[];
 };
 
@@ -27,12 +28,13 @@ export default function PlanForm({
   const [element, setElement] = useState(plan?.element ?? "");
   const [links, setLinks] = useState(plan?.links ?? "");
   const [paid, setPaid] = useState<boolean | null>(plan?.paid ?? null);
+  const [isCommercial, setIsCommercial] = useState<boolean>(plan?.isCommercial ?? false);
   const [selected, setSelected] = useState<string[]>(
     plan?.materials.map((m) => m.image.id) ?? []
   );
 
   async function save() {
-    const body = { title, content, element, links, paid, imageIds: selected };
+    const body = { title, content, element, links, paid, isCommercial, imageIds: selected };
     if (plan) {
       await fetch(`/api/plans/${plan.id}`, {
         method: "PATCH",
@@ -92,6 +94,27 @@ export default function PlanForm({
             placeholder={"https://www.instagram.com/p/xxx/\nhttps://.../"}
             className="w-full border rounded-lg px-3 py-2 mb-4 text-sm"
           />
+
+          <div className="mb-4">
+            <span className="block text-sm text-stone-500 mb-2">是否商单</span>
+            <div className="flex gap-2">
+              {[
+                { v: true, label: "商单", on: "bg-stone-900 border-stone-900 text-white" },
+                { v: false, label: "非商单", on: "bg-stone-800 border-stone-800 text-white" },
+              ].map((o) => (
+                <button
+                  key={String(o.v)}
+                  type="button"
+                  onClick={() => setIsCommercial(o.v)}
+                  className={`text-xs px-3 py-1 rounded-lg border ${
+                    isCommercial === o.v ? o.on : "bg-white border-stone-200 text-stone-500"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="mb-4">
             <span className="block text-sm text-stone-500 mb-2">收款</span>

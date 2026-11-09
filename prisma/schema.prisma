@@ -56,6 +56,7 @@ model Plan {
   links       String    @default("")
   status      String    @default("draft")
   paid        Boolean? // 是否已收款：null=未标记（默认，不显示徽标），true=已收款，false=未收款
+  isCommercial Boolean  @default(false) // 是否商单：true=商单（列表排在最前 + 卡片显著标记），默认 false
   scheduledAt DateTime?
   createdAt   DateTime  @default(now())
   materials   PlanMaterial[]

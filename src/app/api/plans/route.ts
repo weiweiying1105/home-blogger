@@ -20,7 +20,7 @@ export async function GET(req: Request) {
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ isCommercial: "desc" }, { createdAt: "desc" }],
       include: { materials: { include: { image: true }, orderBy: { order: "asc" } } },
     }),
   ]);
@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { title, content, element = "", links = "", paid = null, imageIds = [] } = body;
+  const { title, content, element = "", links = "", paid = null, isCommercial = false, imageIds = [] } = body;
 
   const plan = await prisma.plan.create({
     data: {
@@ -45,6 +45,7 @@ export async function POST(req: Request) {
       element,
       links,
       paid,
+      isCommercial,
       materials: {
         create: imageIds.map((iid: string, i: number) => ({
           imageId: iid,

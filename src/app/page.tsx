@@ -11,6 +11,7 @@ type Plan = {
   links: string;
   status: string;
   paid: boolean | null;
+  isCommercial: boolean;
   materials: { image: { id: string; url: string; thumbnail: string | null; title: string } }[];
 };
 
@@ -77,6 +78,15 @@ export default function Home() {
     load(1, false);
   }
 
+  async function toggleCommercial(p: Plan) {
+    await fetch(`/api/plans/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isCommercial: !p.isCommercial }),
+    });
+    load(1, false);
+  }
+
   const emptyText =
     status === "draft"
       ? "还没有未发布的计划"
@@ -135,7 +145,12 @@ export default function Home() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {p.isCommercial && (
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-stone-900 text-white font-medium shrink-0">
+                        商单
+                      </span>
+                    )}
                     <h2 className="font-medium">{p.title}</h2>
                     {p.status === "published" ? (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 shrink-0">
@@ -193,6 +208,16 @@ export default function Home() {
                 </div>
                 <div className="flex flex-col items-end gap-2 ml-4 shrink-0">
                   <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleCommercial(p); }}
+                      className={`text-xs px-2 py-1 rounded-lg border ${
+                        p.isCommercial
+                          ? "bg-stone-900 border-stone-900 text-white"
+                          : "bg-white border-stone-200 text-stone-500"
+                      }`}
+                    >
+                      商单
+                    </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setPaid(p, true); }}
                       className={`text-xs px-2 py-1 rounded-lg border ${
