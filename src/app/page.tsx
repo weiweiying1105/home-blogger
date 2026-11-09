@@ -147,7 +147,10 @@ export default function Home() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {p.isCommercial && (
-                      <span className="text-xs px-2 py-0.5 rounded-md bg-stone-900 text-white font-medium shrink-0">
+                      <span className="inline-flex items-center gap-1 text-xs pl-1 pr-2 py-0.5 rounded-md bg-emerald-600 text-white font-medium shrink-0">
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-white text-emerald-600 text-[10px] font-bold leading-none">
+                          ¥
+                        </span>
                         商单
                       </span>
                     )}
@@ -212,7 +215,7 @@ export default function Home() {
                       onClick={(e) => { e.stopPropagation(); toggleCommercial(p); }}
                       className={`text-xs px-2 py-1 rounded-lg border ${
                         p.isCommercial
-                          ? "bg-stone-900 border-stone-900 text-white"
+                          ? "bg-emerald-600 border-emerald-600 text-white"
                           : "bg-white border-stone-200 text-stone-500"
                       }`}
                     >

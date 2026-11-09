@@ -99,7 +99,7 @@ export default function PlanForm({
             <span className="block text-sm text-stone-500 mb-2">是否商单</span>
             <div className="flex gap-2">
               {[
-                { v: true, label: "商单", on: "bg-stone-900 border-stone-900 text-white" },
+                { v: true, label: "商单", on: "bg-emerald-600 border-emerald-600 text-white" },
                 { v: false, label: "非商单", on: "bg-stone-800 border-stone-800 text-white" },
               ].map((o) => (
                 <button

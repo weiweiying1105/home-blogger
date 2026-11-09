@@ -78,7 +78,7 @@ src/
 
 笔记前端：`/notes`（列表+分类 pills 筛选）、`/notes/new` 与 `/notes/[id]/edit`（共用 `src/components/NoteEditor.tsx` 双栏编辑+实时预览）、`/notes/[id]`（详情，`src/components/NoteRenderer.tsx` 用 react-markdown + remark-gfm 渲染，安全转义 HTML）。
 
-`Plan` 另有 `isCommercial`（Boolean，默认 false）表示是否商单：`true` 时列表接口把它排在最前（`orderBy: [{ isCommercial: "desc" }, { createdAt: "desc" }]`），卡片标题前显示黑底白字「商单」标签，卡片右侧「商单」按钮可一键切换；新建/编辑表单里是「商单 / 非商单」二选一，新建默认非商单。
+`Plan` 另有 `isCommercial`（Boolean，默认 false）表示是否商单：`true` 时列表接口把它排在最前（`orderBy: [{ isCommercial: "desc" }, { createdAt: "desc" }]`），卡片标题前显示绿底白字「¥ 商单」标签（白圆里一个绿色 ¥ + 商单，`bg-emerald-600`），卡片右侧「商单」按钮可一键切换（激活态绿色）；新建/编辑表单里是「商单 / 非商单」二选一，新建默认非商单。
 
 `Plan` 另有 `paid`（Boolean?，三态）：`null` = 未标记（默认，不显示徽标）、`true` = 已收款（琥珀徽标）、`false` = 未收款（红色徽标）。列表页 `src/app/page.tsx` 每张卡片有「已收款 / 未收款」两个小按钮，`PATCH /api/plans/[id] {paid}` 切换，再点一次当前状态即取消标记回到 `null`；新建/编辑表单里是「已收款 / 未收款 / 不标记」三选一。
 
