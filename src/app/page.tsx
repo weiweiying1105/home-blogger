@@ -34,6 +34,14 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [commercialDraft, setCommercialDraft] = useState<number | null>(null);
+
+  // 商单里还没发布的条数（顶部统计，独立于当前 tab 的列表数据）
+  const loadStats = useCallback(async () => {
+    const res = await fetch("/api/plans?status=draft&commercial=1&page=1&pageSize=1");
+    const data = await res.json();
+    setCommercialDraft(typeof data.total === "number" ? data.total : 0);
+  }, []);
 
   const load = useCallback(async (targetPage: number, append: boolean) => {
     const res = await fetch(`/api/plans?status=${status}&page=${targetPage}&pageSize=${PAGE_SIZE}`);
@@ -41,7 +49,8 @@ export default function Home() {
     setPlans((prev) => (append ? [...prev, ...data.items] : data.items));
     setPage(targetPage);
     setHasMore(data.hasMore);
-  }, [status]);
+    loadStats();
+  }, [status, loadStats]);
 
   useEffect(() => { load(1, false); }, [load]);
 
@@ -104,6 +113,21 @@ export default function Home() {
 
   return (
     <div>
+      <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 mb-5">
+        <div className="flex items-center gap-2 text-sm font-medium text-emerald-800">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px] font-bold leading-none">
+            ¥
+          </span>
+          商单未发布
+        </div>
+        <div className="flex items-baseline gap-1">
+          <span className="text-2xl font-semibold text-emerald-700">
+            {commercialDraft === null ? "—" : commercialDraft}
+          </span>
+          <span className="text-xs text-emerald-700/80">条</span>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">发布计划</h1>
         <button

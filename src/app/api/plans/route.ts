@@ -12,7 +12,12 @@ export async function GET(req: Request) {
     Math.max(1, parseInt(searchParams.get("pageSize") || "10", 10) || 10)
   );
 
-  const where = status && status !== "all" ? { status } : undefined;
+  const commercial = searchParams.get("commercial");
+
+  const where = {
+    ...(status && status !== "all" ? { status } : {}),
+    ...(commercial === "1" ? { isCommercial: true } : {}),
+  };
 
   const [total, items] = await Promise.all([
     prisma.plan.count({ where }),
