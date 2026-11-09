@@ -101,6 +101,7 @@ GitHub: weiweiying1105/home-blogger (main)
 4. **`/api/images?category=` 不含子分类**：审美积累页点父分类只显示直接挂在该分类下的图，不聚合子分类的图。这是设计现状，改动前先问用户是否期望父分类聚合显示。
 5. **本地 dev 的 Prisma 连不上库**：Next dev 优先加载 `.env.local`，其 DATABASE_URL 指向已删除的旧 Supabase 项目（tbeifiac），导致 dev 下所有 API 500。临时解法：本地开发前把 `.env` 的 DATABASE_URL 复制覆盖 `.env.local` 的 DATABASE_URL（或删掉 .env.local 里失效值）。
 6. **线上 PUT `/api/bloggers/[id]` 曾稳定 500**（GET/POST 正常）：2026-10-30 在 `[id]/route.ts` 加 try/catch 错误回传 + 编辑查重后线上实测 200 修复；原 500 的精确堆栈不可见（错误被吞），现所有 API 错误都会返回 `{error: msg}` 可读信息。
+7. **EdgeOne 构建会复用缓存里的旧 Prisma Client**：把 `paid` 改成可空后，线上读到 `null` 直接 500（表现为"有数据的分页 500、空页 200"）。已把 `build` 脚本改成 `prisma generate && next build`（提交 e4cf141）根治。以后任何 schema 变更，都要确认部署时重新生成了 client；`postinstall` 单靠不住。
 
 ## 环境注意事项（Windows）
 
