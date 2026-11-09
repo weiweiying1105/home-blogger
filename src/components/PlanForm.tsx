@@ -105,7 +105,11 @@ export default function PlanForm({
                 <button
                   key={String(o.v)}
                   type="button"
-                  onClick={() => setIsCommercial(o.v)}
+                  onClick={() => {
+                    setIsCommercial(o.v);
+                    // 商单与收款联动：关掉商单就清掉收款标记
+                    if (!o.v && paid !== null) setPaid(null);
+                  }}
                   className={`text-xs px-3 py-1 rounded-lg border ${
                     isCommercial === o.v ? o.on : "bg-white border-stone-200 text-stone-500"
                   }`}
@@ -127,7 +131,11 @@ export default function PlanForm({
                 <button
                   key={String(o.v)}
                   type="button"
-                  onClick={() => setPaid(o.v)}
+                  onClick={() => {
+                    setPaid(o.v);
+                    // 已收款 / 未收款都属于商单
+                    if (o.v !== null) setIsCommercial(true);
+                  }}
                   className={`text-xs px-3 py-1 rounded-lg border ${
                     paid === o.v ? o.on : "bg-white border-stone-200 text-stone-500"
                   }`}

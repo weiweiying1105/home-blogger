@@ -70,19 +70,27 @@ export default function Home() {
   async function setPaid(p: Plan, value: boolean) {
     // 再点一次同一个状态 = 取消标记，回到"未标记"（null，不显示徽标）
     const next = p.paid === value ? null : value;
+    const body: Record<string, unknown> = { paid: next };
+    // 已收款 / 未收款都属于商单：标记收款时自动把这条设为商单
+    if (next !== null) body.isCommercial = true;
     await fetch(`/api/plans/${p.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paid: next }),
+      body: JSON.stringify(body),
     });
     load(1, false);
   }
 
   async function toggleCommercial(p: Plan) {
+    const next = !p.isCommercial;
+    const body: Record<string, unknown> = { isCommercial: next };
+    // 商单与收款状态联动：开商单默认未收款，关商单则清掉收款标记
+    if (next && p.paid === null) body.paid = false;
+    if (!next && p.paid !== null) body.paid = null;
     await fetch(`/api/plans/${p.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isCommercial: !p.isCommercial }),
+      body: JSON.stringify(body),
     });
     load(1, false);
   }

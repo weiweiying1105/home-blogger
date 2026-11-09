@@ -82,6 +82,13 @@ src/
 
 `Plan` 另有 `paid`（Boolean?，三态）：`null` = 未标记（默认，不显示徽标）、`true` = 已收款（琥珀徽标）、`false` = 未收款（红色徽标）。列表页 `src/app/page.tsx` 每张卡片有「已收款 / 未收款」两个小按钮，`PATCH /api/plans/[id] {paid}` 切换，再点一次当前状态即取消标记回到 `null`；新建/编辑表单里是「已收款 / 未收款 / 不标记」三选一。
 
+收款与商单是联动的一对：`true` 与 `false` 只能存在一个（单一字段天然互斥），并且标了收款就等于商单。具体规则写在 `setPaid` / `toggleCommercial` 里，一次 PATCH 同时改两个字段：
+- 标记「已收款」或「未收款」→ 同时 `isCommercial = true`（已收款/未收款都是商单）；
+- 打开商单且收款为 `null` → 同时 `paid = false`（新商单默认未收款）；
+- 关闭商单且收款不为 `null` → 同时 `paid = null`（清掉收款标记）；
+- 表单里选「已收款 / 未收款」自动切到「商单」，选「非商单」则清掉收款标记。
+所以不会出现"非商单却带收款徽标"，也不会出现"已收款和未收款同时成立"。
+
 历史数据从 SQLite 迁移时的快照存在 `prisma/seed-data.json`，回放脚本 `scripts/seed-from-json.mjs`（node 直接跑，用于重置/换库）。
 
 ## 部署拓扑
