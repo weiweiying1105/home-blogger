@@ -10,7 +10,7 @@ type Plan = {
   element: string;
   links: string;
   status: string;
-  paid: boolean;
+  paid: boolean | null;
   materials: { image: { id: string; url: string; thumbnail: string | null; title: string } }[];
 };
 
@@ -66,11 +66,13 @@ export default function Home() {
     load(1, false);
   }
 
-  async function togglePaid(p: Plan) {
+  async function setPaid(p: Plan, value: boolean) {
+    // 再点一次同一个状态 = 取消标记，回到"未标记"（null，不显示徽标）
+    const next = p.paid === value ? null : value;
     await fetch(`/api/plans/${p.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paid: !p.paid }),
+      body: JSON.stringify({ paid: next }),
     });
     load(1, false);
   }
@@ -144,12 +146,13 @@ export default function Home() {
                         未发布
                       </span>
                     )}
-                    {p.paid ? (
+                    {p.paid === true && (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
                         已收款
                       </span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full border border-stone-200 text-stone-400 shrink-0">
+                    )}
+                    {p.paid === false && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-600 shrink-0">
                         未收款
                       </span>
                     )}
@@ -189,16 +192,28 @@ export default function Home() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2 ml-4 shrink-0">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); togglePaid(p); }}
-                    className={`text-xs px-3 py-1 rounded-lg border ${
-                      p.paid
-                        ? "bg-amber-50 border-amber-200 text-amber-700"
-                        : "bg-white text-stone-500"
-                    }`}
-                  >
-                    {p.paid ? "取消收款标记" : "标记已收款"}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPaid(p, true); }}
+                      className={`text-xs px-2 py-1 rounded-lg border ${
+                        p.paid === true
+                          ? "bg-amber-500 border-amber-500 text-white"
+                          : "bg-white border-stone-200 text-stone-500"
+                      }`}
+                    >
+                      已收款
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setPaid(p, false); }}
+                      className={`text-xs px-2 py-1 rounded-lg border ${
+                        p.paid === false
+                          ? "bg-red-500 border-red-500 text-white"
+                          : "bg-white border-stone-200 text-stone-500"
+                      }`}
+                    >
+                      未收款
+                    </button>
+                  </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleStatus(p); }}
                     className={`text-xs px-3 py-1 rounded-lg ${

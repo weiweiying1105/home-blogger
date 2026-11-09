@@ -36,7 +36,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { title, content, element = "", links = "", paid = false, imageIds = [] } = body;
+  const { title, content, element = "", links = "", paid = null, imageIds = [] } = body;
 
   const plan = await prisma.plan.create({
     data: {

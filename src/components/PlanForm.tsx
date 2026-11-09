@@ -9,7 +9,7 @@ type Plan = {
   content: string;
   element: string;
   links: string;
-  paid?: boolean;
+  paid?: boolean | null;
   materials: { image: { id: string } }[];
 };
 
@@ -26,7 +26,7 @@ export default function PlanForm({
   const [content, setContent] = useState(plan?.content ?? "");
   const [element, setElement] = useState(plan?.element ?? "");
   const [links, setLinks] = useState(plan?.links ?? "");
-  const [paid, setPaid] = useState(plan?.paid ?? false);
+  const [paid, setPaid] = useState<boolean | null>(plan?.paid ?? null);
   const [selected, setSelected] = useState<string[]>(
     plan?.materials.map((m) => m.image.id) ?? []
   );
@@ -93,15 +93,27 @@ export default function PlanForm({
             className="w-full border rounded-lg px-3 py-2 mb-4 text-sm"
           />
 
-          <label className="flex items-center gap-2 text-sm text-stone-600 mb-4 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={paid}
-              onChange={(e) => setPaid(e.target.checked)}
-              className="w-4 h-4 accent-amber-500 cursor-pointer"
-            />
-            已收款
-          </label>
+          <div className="mb-4">
+            <span className="block text-sm text-stone-500 mb-2">收款</span>
+            <div className="flex gap-2">
+              {[
+                { v: true, label: "已收款", on: "bg-amber-500 border-amber-500 text-white" },
+                { v: false, label: "未收款", on: "bg-red-500 border-red-500 text-white" },
+                { v: null, label: "不标记", on: "bg-stone-800 border-stone-800 text-white" },
+              ].map((o) => (
+                <button
+                  key={String(o.v)}
+                  type="button"
+                  onClick={() => setPaid(o.v)}
+                  className={`text-xs px-3 py-1 rounded-lg border ${
+                    paid === o.v ? o.on : "bg-white border-stone-200 text-stone-500"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <label className="block text-sm text-stone-500 mb-2">参考图</label>
           <ImagePicker selected={selected} onChange={setSelected} multi manageMode />

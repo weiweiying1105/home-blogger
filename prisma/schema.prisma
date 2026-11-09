@@ -55,7 +55,7 @@ model Plan {
   element     String    @default("")
   links       String    @default("")
   status      String    @default("draft")
-  paid        Boolean   @default(false) // 是否已收款
+  paid        Boolean? // 是否已收款：null=未标记（默认，不显示徽标），true=已收款，false=未收款
   scheduledAt DateTime?
   createdAt   DateTime  @default(now())
   materials   PlanMaterial[]
