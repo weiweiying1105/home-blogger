@@ -9,6 +9,7 @@ type Plan = {
   content: string;
   element: string;
   links: string;
+  paid?: boolean;
   materials: { image: { id: string } }[];
 };
 
@@ -25,12 +26,13 @@ export default function PlanForm({
   const [content, setContent] = useState(plan?.content ?? "");
   const [element, setElement] = useState(plan?.element ?? "");
   const [links, setLinks] = useState(plan?.links ?? "");
+  const [paid, setPaid] = useState(plan?.paid ?? false);
   const [selected, setSelected] = useState<string[]>(
     plan?.materials.map((m) => m.image.id) ?? []
   );
 
   async function save() {
-    const body = { title, content, element, links, imageIds: selected };
+    const body = { title, content, element, links, paid, imageIds: selected };
     if (plan) {
       await fetch(`/api/plans/${plan.id}`, {
         method: "PATCH",
@@ -90,6 +92,16 @@ export default function PlanForm({
             placeholder={"https://www.instagram.com/p/xxx/\nhttps://.../"}
             className="w-full border rounded-lg px-3 py-2 mb-4 text-sm"
           />
+
+          <label className="flex items-center gap-2 text-sm text-stone-600 mb-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={paid}
+              onChange={(e) => setPaid(e.target.checked)}
+              className="w-4 h-4 accent-amber-500 cursor-pointer"
+            />
+            已收款
+          </label>
 
           <label className="block text-sm text-stone-500 mb-2">参考图</label>
           <ImagePicker selected={selected} onChange={setSelected} multi manageMode />

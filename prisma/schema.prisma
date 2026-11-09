@@ -55,6 +55,7 @@ model Plan {
   element     String    @default("")
   links       String    @default("")
   status      String    @default("draft")
+  paid        Boolean   @default(false) // 是否已收款
   scheduledAt DateTime?
   createdAt   DateTime  @default(now())
   materials   PlanMaterial[]

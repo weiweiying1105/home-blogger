@@ -10,6 +10,7 @@ type Plan = {
   element: string;
   links: string;
   status: string;
+  paid: boolean;
   materials: { image: { id: string; url: string; thumbnail: string | null; title: string } }[];
 };
 
@@ -61,6 +62,15 @@ export default function Home() {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: p.status === "published" ? "draft" : "published" }),
+    });
+    load(1, false);
+  }
+
+  async function togglePaid(p: Plan) {
+    await fetch(`/api/plans/${p.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paid: !p.paid }),
     });
     load(1, false);
   }
@@ -134,6 +144,15 @@ export default function Home() {
                         未发布
                       </span>
                     )}
+                    {p.paid ? (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
+                        已收款
+                      </span>
+                    ) : (
+                      <span className="text-xs px-2 py-0.5 rounded-full border border-stone-200 text-stone-400 shrink-0">
+                        未收款
+                      </span>
+                    )}
                   </div>
                   {p.element && (
                     <p className="text-xs text-stone-400 mt-1">元素：{p.element}</p>
@@ -170,6 +189,16 @@ export default function Home() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2 ml-4 shrink-0">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); togglePaid(p); }}
+                    className={`text-xs px-3 py-1 rounded-lg border ${
+                      p.paid
+                        ? "bg-amber-50 border-amber-200 text-amber-700"
+                        : "bg-white text-stone-500"
+                    }`}
+                  >
+                    {p.paid ? "取消收款标记" : "标记已收款"}
+                  </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleStatus(p); }}
                     className={`text-xs px-3 py-1 rounded-lg ${
