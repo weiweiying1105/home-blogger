@@ -62,7 +62,7 @@ src/
 | `/api/images/[id]/analyze` | POST | 调 AI 返回候选标签（不落库，等用户确认） |
 | `/api/upload` | POST | FormData 上传图片到 COS + AI 生成描述（图片管理页用） |
 | `/api/upload-gallery` | POST | 上传到 COS，可选 `categoryId`（审美积累页用） |
-| `/api/plans`、`/api/plans/[id]` | CRUD | 发布计划，status: draft/published |
+| `/api/plans`、`/api/plans/[id]` | CRUD | 发布计划，status: draft/published；paid: 布尔，是否已收款（列表卡片点「标记已收款」切换，新建/编辑表单有勾选框） |
 | `/api/tags` | GET/POST | 自由标签 |
 | `/api/todos`、`/api/todos/[id]` | CRUD | 四象限待办，quadrant 1-4；GET 按 order asc，POST 创建时 order=象限内现有条数 |
 | `/api/todos/reorder` | POST | 拖拽排序批量提交 `{items:[{id,quadrant,order}]}`，事务一次更新；前端拖拽跨象限+象限内排序 |
@@ -77,6 +77,8 @@ src/
 9 个模型：`Image`、`Category`（树形自引用，parentId）、`CategoryOnImage`、`Plan`、`PlanMaterial`（Plan↔Image 多对多）、`Todo`、`Tag`、`ImageTag`、`Blogger`、`DeletedBlogger`（博主删除黑名单，username @unique，爬取导入 POST 时自动拦截）、`Note`（笔记：title/content(Markdown)/category 单层分类）。所有关联均为 `onDelete: Cascade`。ID 是 cuid 字符串。
 
 笔记前端：`/notes`（列表+分类 pills 筛选）、`/notes/new` 与 `/notes/[id]/edit`（共用 `src/components/NoteEditor.tsx` 双栏编辑+实时预览）、`/notes/[id]`（详情，`src/components/NoteRenderer.tsx` 用 react-markdown + remark-gfm 渲染，安全转义 HTML）。
+
+`Plan` 另有 `paid`（Boolean，默认 false）表示这条发布计划是否已收款；列表页 `src/app/page.tsx` 用徽标（已收款/未收款）+「标记已收款」按钮调用 `PATCH /api/plans/[id] {paid: 布尔}` 切换。
 
 历史数据从 SQLite 迁移时的快照存在 `prisma/seed-data.json`，回放脚本 `scripts/seed-from-json.mjs`（node 直接跑，用于重置/换库）。
 
