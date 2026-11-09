@@ -38,9 +38,13 @@ export default function Home() {
 
   // 商单里还没发布的条数（顶部统计，独立于当前 tab 的列表数据）
   const loadStats = useCallback(async () => {
-    const res = await fetch("/api/plans?status=draft&commercial=1&page=1&pageSize=1");
-    const data = await res.json();
-    setCommercialDraft(typeof data.total === "number" ? data.total : 0);
+    try {
+      const res = await fetch(`/api/plans?status=draft&commercial=1&page=1&pageSize=1&cb=${Date.now()}`);
+      const data = await res.json();
+      setCommercialDraft(typeof data.total === "number" ? data.total : 0);
+    } catch {
+      // 接口抖动时保留上一次的数字，不显示为 0
+    }
   }, []);
 
   const load = useCallback(async (targetPage: number, append: boolean) => {
