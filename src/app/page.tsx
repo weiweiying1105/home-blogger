@@ -23,6 +23,23 @@ const STATUS_TABS = [
 
 type StatusKey = "draft" | "published" | "all";
 
+const COMMERCIAL_TABS = [
+  { key: "all", label: "全部" },
+  { key: "yes", label: "商单" },
+  { key: "no", label: "非商单" },
+] as const;
+
+type CommercialKey = "all" | "yes" | "no";
+
+const PAID_TABS = [
+  { key: "all", label: "全部" },
+  { key: "paid", label: "已收款" },
+  { key: "unpaid", label: "未收款" },
+  { key: "none", label: "未标记" },
+] as const;
+
+type PaidKey = "all" | "paid" | "unpaid" | "none";
+
 const PAGE_SIZE = 10;
 
 export default function Home() {
@@ -30,31 +47,55 @@ export default function Home() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Plan | null>(null);
   const [status, setStatus] = useState<StatusKey>("draft");
+  const [commercial, setCommercial] = useState<CommercialKey>("all");
+  const [paid, setPaidFilter] = useState<PaidKey>("all");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [commercialDraft, setCommercialDraft] = useState<number | null>(null);
+  const [unpaidCommercial, setUnpaidCommercial] = useState<number | null>(null);
 
-  // 商单里还没发布的条数（顶部统计，独立于当前 tab 的列表数据）
+  // 顶部统计：商单未发布条数、商单未回款条数（独立于当前 tab 的列表数据）
   const loadStats = useCallback(async () => {
+    const now = Date.now();
+    const [draftRes, unpaidRes] = await Promise.all([
+      fetch(`/api/plans?status=draft&commercial=1&page=1&pageSize=1&cb=${now}`),
+      fetch(`/api/plans?commercial=1&paid=0&page=1&pageSize=1&cb=${now}`),
+    ]);
     try {
-      const res = await fetch(`/api/plans?status=draft&commercial=1&page=1&pageSize=1&cb=${Date.now()}`);
-      const data = await res.json();
-      setCommercialDraft(typeof data.total === "number" ? data.total : 0);
+      const draftData = await draftRes.json();
+      setCommercialDraft(typeof draftData.total === "number" ? draftData.total : 0);
+    } catch {
+      // 接口抖动时保留上一次的数字，不显示为 0
+    }
+    try {
+      const unpaidData = await unpaidRes.json();
+      setUnpaidCommercial(typeof unpaidData.total === "number" ? unpaidData.total : 0);
     } catch {
       // 接口抖动时保留上一次的数字，不显示为 0
     }
   }, []);
 
   const load = useCallback(async (targetPage: number, append: boolean) => {
-    const res = await fetch(`/api/plans?status=${status}&page=${targetPage}&pageSize=${PAGE_SIZE}`);
+    const params = new URLSearchParams({
+      status,
+      page: String(targetPage),
+      pageSize: String(PAGE_SIZE),
+    });
+    if (commercial === "yes") params.set("commercial", "1");
+    else if (commercial === "no") params.set("commercial", "0");
+    if (paid === "paid") params.set("paid", "1");
+    else if (paid === "unpaid") params.set("paid", "0");
+    else if (paid === "none") params.set("paid", "none");
+
+    const res = await fetch(`/api/plans?${params.toString()}`);
     const data = await res.json();
     setPlans((prev) => (append ? [...prev, ...data.items] : data.items));
     setPage(targetPage);
     setHasMore(data.hasMore);
     loadStats();
-  }, [status, loadStats]);
+  }, [status, commercial, paid, loadStats]);
 
   useEffect(() => { load(1, false); }, [load]);
 
@@ -108,27 +149,38 @@ export default function Home() {
     load(1, false);
   }
 
-  const emptyText =
-    status === "draft"
-      ? "还没有未发布的计划"
-      : status === "published"
-        ? "还没有已发布的计划"
-        : "还没有发布计划，点右上角新建一条吧";
+  const emptyText = "没有符合筛选条件的计划";
 
   return (
     <div>
-      <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 mb-5">
-        <div className="flex items-center gap-2 text-sm font-medium text-emerald-800">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px] font-bold leading-none">
-            ¥
-          </span>
-          商单未发布
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-emerald-800">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-600 text-white text-[11px] font-bold leading-none">
+              ¥
+            </span>
+            商单未发布
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-semibold text-emerald-700">
+              {commercialDraft === null ? "—" : commercialDraft}
+            </span>
+            <span className="text-xs text-emerald-700/80">条</span>
+          </div>
         </div>
-        <div className="flex items-baseline gap-1">
-          <span className="text-2xl font-semibold text-emerald-700">
-            {commercialDraft === null ? "—" : commercialDraft}
-          </span>
-          <span className="text-xs text-emerald-700/80">条</span>
+        <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-red-800">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white text-[11px] font-bold leading-none">
+              ¥
+            </span>
+            商单未回款
+          </div>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-semibold text-red-700">
+              {unpaidCommercial === null ? "—" : unpaidCommercial}
+            </span>
+            <span className="text-xs text-red-700/80">条</span>
+          </div>
         </div>
       </div>
 
@@ -142,18 +194,49 @@ export default function Home() {
         </button>
       </div>
 
-      <div className="flex items-center gap-2 mb-6">
-        {STATUS_TABS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setStatus(tab.key)}
-            className={`px-4 py-1.5 rounded-full text-sm ${
-              status === tab.key ? "bg-stone-800 text-white" : "bg-white border text-stone-600"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mb-6">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-stone-400 w-10 shrink-0">状态</span>
+          {STATUS_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setStatus(tab.key)}
+              className={`px-4 py-1.5 rounded-full text-sm ${
+                status === tab.key ? "bg-stone-800 text-white" : "bg-white border text-stone-600"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-stone-400 w-10 shrink-0">商单</span>
+          {COMMERCIAL_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setCommercial(tab.key)}
+              className={`px-4 py-1.5 rounded-full text-sm ${
+                commercial === tab.key ? "bg-stone-800 text-white" : "bg-white border text-stone-600"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-stone-400 w-10 shrink-0">回款</span>
+          {PAID_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setPaidFilter(tab.key)}
+              className={`px-4 py-1.5 rounded-full text-sm ${
+                paid === tab.key ? "bg-stone-800 text-white" : "bg-white border text-stone-600"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {showForm && (

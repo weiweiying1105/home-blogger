@@ -13,10 +13,16 @@ export async function GET(req: Request) {
   );
 
   const commercial = searchParams.get("commercial");
+  const paidParam = searchParams.get("paid");
 
   const where = {
     ...(status && status !== "all" ? { status } : {}),
-    ...(commercial === "1" ? { isCommercial: true } : {}),
+    ...(commercial === "1" ? { isCommercial: true } : commercial === "0" ? { isCommercial: false } : {}),
+    ...(paidParam === "1" || paidParam === "0"
+      ? { paid: paidParam === "1" }
+      : paidParam === "none"
+        ? { paid: null }
+        : {}),
   };
 
   const [total, items] = await Promise.all([
