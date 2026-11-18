@@ -11,6 +11,28 @@ type ImageItem = {
   tags: { tag: { name: string } }[];
 };
 
+/** 图片下方展示已有标签；没有标签时不渲染任何内容 */
+function TagChips({ tags }: { tags?: { tag: { name: string } }[] }) {
+  const names = (tags ?? []).map((t) => t.tag.name).filter(Boolean);
+  if (names.length === 0) return null;
+  const shown = names.slice(0, 2);
+  const rest = names.length - shown.length;
+  return (
+    <div className="flex flex-wrap items-center gap-1 px-0.5 pt-1">
+      {shown.map((name) => (
+        <span
+          key={name}
+          className="text-[10px] leading-4 bg-stone-100 text-stone-600 px-1.5 rounded truncate max-w-full"
+          title={name}
+        >
+          {name}
+        </span>
+      ))}
+      {rest > 0 && <span className="text-[10px] leading-4 text-stone-400">+{rest}</span>}
+    </div>
+  );
+}
+
 export default function ImagePicker({
   selected,
   onChange,
@@ -161,16 +183,19 @@ export default function ImagePicker({
                   <div
                     key={img.id}
                     onClick={() => pick(img.id)}
-                    className={`cursor-pointer relative rounded-lg overflow-hidden border-2 aspect-square ${
+                    className={`cursor-pointer rounded-lg overflow-hidden border-2 bg-white ${
                       selected.includes(img.id) ? "border-stone-800" : "border-transparent"
                     }`}
                   >
-                    <img src={img.thumbnail || img.url} alt={img.title} className="w-full h-full object-cover" />
-                    {selected.includes(img.id) && (
-                      <div className="absolute top-1 right-1 bg-stone-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                        ✓
-                      </div>
-                    )}
+                    <div className="relative aspect-square">
+                      <img src={img.thumbnail || img.url} alt={img.title} className="w-full h-full object-cover" />
+                      {selected.includes(img.id) && (
+                        <div className="absolute top-1 right-1 bg-stone-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                          ✓
+                        </div>
+                      )}
+                    </div>
+                    <TagChips tags={img.tags} />
                   </div>
                 ))}
               </div>
@@ -222,16 +247,19 @@ export default function ImagePicker({
           <div
             key={img.id}
             onClick={() => pick(img.id)}
-            className={`cursor-pointer relative rounded-lg overflow-hidden border-2 aspect-square ${
+            className={`cursor-pointer rounded-lg overflow-hidden border-2 bg-white ${
               selected.includes(img.id) ? "border-stone-800" : "border-transparent"
             }`}
           >
-            <img src={img.thumbnail || img.url} alt={img.title} className="w-full h-full object-cover" />
-            {selected.includes(img.id) && (
-              <div className="absolute top-1 right-1 bg-stone-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                ✓
-              </div>
-            )}
+            <div className="relative aspect-square">
+              <img src={img.thumbnail || img.url} alt={img.title} className="w-full h-full object-cover" />
+              {selected.includes(img.id) && (
+                <div className="absolute top-1 right-1 bg-stone-800 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                  ✓
+                </div>
+              )}
+            </div>
+            <TagChips tags={img.tags} />
           </div>
         ))}
       </div>
