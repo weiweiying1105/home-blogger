@@ -12,6 +12,7 @@ type ImageItem = {
   thumbnail: string | null;
   title: string;
   categories: { categoryId: string; category?: { name: string } | null }[];
+  _count?: { plans: number };
 };
 
 /** 图片左下角叠加显示所属分类（最多 2 个，其余折叠 +N） */
@@ -128,6 +129,33 @@ export default function GalleryPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ hiddenFromGallery: true }),
     });
+    load();
+  }
+
+  /** 删除图片：先查有没有被发布计划引用，再确认 */
+  async function deleteImage(img: ImageItem) {
+    let refs: { count: number; plans: { title: string }[] } = { count: 0, plans: [] };
+    try {
+      const r = await fetch(`/api/images/${img.id}/references`);
+      refs = await r.json();
+    } catch {}
+
+    const titles = (refs.plans ?? []).slice(0, 3).map((p) => p.title).join("、");
+    const refLine =
+      refs.count > 0
+        ? `\n⚠️ 这张图正被 ${refs.count} 个发布计划引用${titles ? `：${titles}${refs.count > 3 ? "…" : ""}` : ""}，删除后会从这些计划中移除。`
+        : "";
+    const msg =
+      `确认删除这张图？${refLine}\nCOS 上的原图和缩略图会一起删除，操作不可恢复。`;
+    if (!confirm(msg)) return;
+
+    const r = await fetch(`/api/images/${img.id}`, { method: "DELETE" });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      alert(d?.error || "删除失败");
+      return;
+    }
+    // 图被删掉后它在该分类的关联也没了，重新拉分类图片 id
     load();
   }
 
@@ -256,6 +284,12 @@ export default function GalleryPage() {
                   className="bg-stone-800/90 text-white text-xs px-3 py-1.5 rounded-lg"
                 >
                   不在图库显示
+                </button>
+                <button
+                  onClick={() => deleteImage(img)}
+                  className="bg-red-500/90 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-red-600"
+                >
+                  删除
                 </button>
               </div>
               {/* 分类选择弹层 */}

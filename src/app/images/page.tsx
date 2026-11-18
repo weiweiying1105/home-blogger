@@ -72,7 +72,18 @@ export default function ImagesPage() {
   }
 
   async function removeImage(id: string) {
-    if (!confirm("删除这张图？COS 上的文件也会一起删掉")) return;
+    // 删除前先查引用
+    let refs: { count: number; plans: { title: string }[] } = { count: 0, plans: [] };
+    try {
+      const r = await fetch(`/api/images/${id}/references`);
+      refs = await r.json();
+    } catch {}
+    const titles = (refs.plans ?? []).slice(0, 3).map((p) => p.title).join("、");
+    const refLine =
+      refs.count > 0
+        ? `\n⚠️ 这张图正被 ${refs.count} 个发布计划引用${titles ? `：${titles}${refs.count > 3 ? "…" : ""}` : ""}，删除后会从这些计划中移除。`
+        : "";
+    if (!confirm(`确认删除这张图？${refLine}\nCOS 上的原图和缩略图会一起删除，操作不可恢复。`)) return;
     await fetch(`/api/images/${id}`, { method: "DELETE" });
     setSelected((prev) => {
       const next = new Set(prev);
