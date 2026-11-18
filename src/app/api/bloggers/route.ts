@@ -5,7 +5,8 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const bloggers = await prisma.blogger.findMany({
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    // 星标的排最前，其余按权重、创建时间
+    orderBy: [{ starred: "desc" }, { sortOrder: "asc" }, { createdAt: "asc" }],
   });
   return NextResponse.json(bloggers);
 }

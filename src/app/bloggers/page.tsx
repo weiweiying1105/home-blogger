@@ -13,6 +13,7 @@ type Blogger = {
   homepage: string;
   tags: string;
   sortOrder: number;
+  starred: boolean;
 };
 
 const EMPTY = { username: "", name: "", bio: "", avatarUrl: "", coverUrl: "", homepage: "", tags: "", sortOrder: "" };
@@ -32,6 +33,8 @@ export default function BloggersPage() {
   const [saving, setSaving] = useState(false);
   const [deletedOpen, setDeletedOpen] = useState(false);
   const [deletedList, setDeletedList] = useState<{ id: string; username: string; createdAt: string }[]>([]);
+  const [onlyStarred, setOnlyStarred] = useState(false);
+  const [starringId, setStarringId] = useState("");
 
   async function load() {
     const r = await fetch("/api/bloggers");
@@ -162,6 +165,28 @@ export default function BloggersPage() {
     }
   }
 
+  /** 打星标 / 取消星标 */
+  async function toggleStar(b: Blogger) {
+    setStarringId(b.id);
+    try {
+      const r = await fetch(`/api/bloggers/${b.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ starred: !b.starred }),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => null);
+        alert(j?.error || `设置星标失败（${r.status}），请稍后重试`);
+        return;
+      }
+      load();
+    } catch {
+      alert("网络异常，设置星标失败，请稍后重试");
+    } finally {
+      setStarringId("");
+    }
+  }
+
   async function remove(b: Blogger) {
     if (!confirm(`删除博主 @${b.username}？\n删除后该 Ins 账号将记入“已删除清单”，后续抓取导入会自动跳过。`)) return;
     try {
@@ -210,7 +235,8 @@ export default function BloggersPage() {
       !q || b.username.toLowerCase().includes(q.toLowerCase()) || b.name.includes(q);
     const okTag =
       !activeTag || (b.tags || "").split(",").map((t) => t.trim()).includes(activeTag);
-    return okQ && okTag;
+    const okStar = !onlyStarred || b.starred;
+    return okQ && okTag && okStar;
   });
 
   return (
@@ -241,6 +267,16 @@ export default function BloggersPage() {
             placeholder="搜索账号名或名字..."
             className="w-full max-w-sm border rounded-lg px-3 py-2 text-sm"
           />
+          <button
+            onClick={() => setOnlyStarred((v) => !v)}
+            className={`text-xs px-3 py-1.5 rounded-full border whitespace-nowrap ${
+              onlyStarred
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+            }`}
+          >
+            ★ 只看星标（{bloggers.filter((b) => b.starred).length}）
+          </button>
           <span className="text-xs text-stone-400">权重数字越小越靠前，改单个不牵连其它</span>
         </div>
         {allTags.length > 0 && (
@@ -288,6 +324,18 @@ export default function BloggersPage() {
               <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">
                 #{idx + 1}
               </span>
+              <button
+                onClick={() => toggleStar(b)}
+                disabled={starringId === b.id}
+                title={b.starred ? "取消星标" : "打上星标（星标博主排在最前）"}
+                className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-lg leading-none backdrop-blur transition ${
+                  b.starred
+                    ? "bg-amber-400/95 text-white shadow"
+                    : "bg-black/45 text-white/85 hover:bg-black/65"
+                } ${starringId === b.id ? "opacity-60" : ""}`}
+              >
+                {b.starred ? "★" : "☆"}
+              </button>
             </div>
             <div className="p-4 flex-1 flex flex-col">
               <div className="min-w-0">
