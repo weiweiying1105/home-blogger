@@ -11,8 +11,38 @@ type ImageItem = {
   url: string;
   thumbnail: string | null;
   title: string;
-  categories: { categoryId: string }[];
+  categories: { categoryId: string; category?: { name: string } | null }[];
 };
+
+/** 图片左下角叠加显示所属分类（最多 2 个，其余折叠 +N） */
+function CatOverlay({ categories }: { categories: ImageItem["categories"] }) {
+  const names = (categories ?? [])
+    .map((c) => c.category?.name)
+    .filter((n): n is string => Boolean(n));
+  if (names.length === 0) return null;
+  const shown = names.slice(0, 2);
+  const rest = names.length - shown.length;
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-1.5 pb-1 pt-5 pointer-events-none">
+      <div className="flex flex-wrap items-center gap-1">
+        {shown.map((name) => (
+          <span
+            key={name}
+            className="text-[11px] leading-4 px-1.5 rounded bg-white/90 text-stone-800 font-medium truncate max-w-full"
+            title={name}
+          >
+            {name}
+          </span>
+        ))}
+        {rest > 0 && (
+          <span className="text-[11px] leading-4 text-white/80" title={names.slice(2).join("、")}>
+            +{rest}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function GalleryPage() {
   const [images, setImages] = useState<ImageItem[]>([]);
@@ -183,6 +213,7 @@ export default function GalleryPage() {
               <div className="aspect-square rounded-lg overflow-hidden bg-stone-200">
                 <img src={img.thumbnail || img.url} alt={img.title} className="w-full h-full object-cover" />
               </div>
+              <CatOverlay categories={img.categories} />
               {/* 悬停显示分类编辑按钮 */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                 <button
