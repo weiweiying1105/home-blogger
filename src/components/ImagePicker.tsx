@@ -8,27 +8,59 @@ type ImageItem = {
   url: string;
   thumbnail: string | null;
   title: string;
-  tags: { tag: { name: string } }[];
+  categories?: { categoryId: string; category?: { name: string } | null }[];
+  tags?: { tag: { name: string } }[];
 };
 
-/** 图片下方展示已有标签；没有标签时不渲染任何内容 */
-function TagChips({ tags }: { tags?: { tag: { name: string } }[] }) {
-  const names = (tags ?? []).map((t) => t.tag.name).filter(Boolean);
-  if (names.length === 0) return null;
-  const shown = names.slice(0, 2);
-  const rest = names.length - shown.length;
+/** 叠加在图片底部的关联信息：分类名（白底）+ 标签（# 半透明），最多各 2 个 */
+function ImageOverlay({ img }: { img: ImageItem }) {
+  const catNames = (img.categories ?? [])
+    .map((c) => c.category?.name)
+    .filter((n): n is string => Boolean(n));
+  const tagNames = (img.tags ?? []).map((t) => t.tag.name).filter(Boolean);
+  if (catNames.length === 0 && tagNames.length === 0) return null;
+
+  const catShown = catNames.slice(0, 2);
+  const tagShown = tagNames.slice(0, 2);
+
   return (
-    <div className="flex flex-wrap items-center gap-1 px-0.5 pt-1">
-      {shown.map((name) => (
-        <span
-          key={name}
-          className="text-[10px] leading-4 bg-stone-100 text-stone-600 px-1.5 rounded truncate max-w-full"
-          title={name}
-        >
-          {name}
-        </span>
-      ))}
-      {rest > 0 && <span className="text-[10px] leading-4 text-stone-400">+{rest}</span>}
+    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/45 to-transparent px-1 pb-1 pt-5 pointer-events-none">
+      <div className="flex flex-wrap items-center gap-1">
+        {catShown.map((name) => (
+          <span
+            key={`c-${name}`}
+            className="text-[10px] leading-4 px-1.5 rounded bg-white/90 text-stone-800 font-medium truncate max-w-full"
+            title={name}
+          >
+            {name}
+          </span>
+        ))}
+        {catNames.length > catShown.length && (
+          <span
+            className="text-[10px] leading-4 text-white/80"
+            title={catNames.slice(2).join("、")}
+          >
+            +{catNames.length - catShown.length}
+          </span>
+        )}
+        {tagShown.map((name) => (
+          <span
+            key={`t-${name}`}
+            className="text-[10px] leading-4 px-1.5 rounded bg-black/45 text-white/90 border border-white/30 truncate max-w-full"
+            title={`#${name}`}
+          >
+            #{name}
+          </span>
+        ))}
+        {tagNames.length > tagShown.length && (
+          <span
+            className="text-[10px] leading-4 text-white/80"
+            title={tagNames.slice(2).join("、")}
+          >
+            +{tagNames.length - tagShown.length}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -105,9 +137,11 @@ export default function ImagePicker({
 
   const filtered = images.filter((img) => {
     if (!q) return true;
+    const catNames = (img.categories ?? []).map((c) => c.category?.name ?? "");
     return (
       img.title.includes(q) ||
-      img.tags?.some((t) => t.tag.name.includes(q))
+      img.tags?.some((t) => t.tag.name.includes(q)) ||
+      catNames.some((n) => n.includes(q))
     );
   });
 
@@ -194,8 +228,8 @@ export default function ImagePicker({
                           ✓
                         </div>
                       )}
+                      <ImageOverlay img={img} />
                     </div>
-                    <TagChips tags={img.tags} />
                   </div>
                 ))}
               </div>
@@ -258,8 +292,8 @@ export default function ImagePicker({
                   ✓
                 </div>
               )}
+              <ImageOverlay img={img} />
             </div>
-            <TagChips tags={img.tags} />
           </div>
         ))}
       </div>
