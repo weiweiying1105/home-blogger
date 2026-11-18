@@ -17,6 +17,7 @@ export async function GET(req: Request) {
     include: {
       categories: { include: { category: true } },
       tags: { include: { tag: true } },
+      _count: { select: { plans: true } },
     },
     orderBy: { createdAt: "desc" },
   });

@@ -9,6 +9,7 @@ type ImageItem = {
   thumbnail: string | null;
   title: string;
   tags: { tag: { id: string; name: string } }[];
+  _count?: { plans: number };
 };
 
 export default function ImagesPage() {
@@ -20,6 +21,8 @@ export default function ImagesPage() {
   const [analyzing, setAnalyzing] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState("");
   const [aiPreview, setAiPreview] = useState<{ imageId: string; tags: string[] } | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { pasting } = usePasteUpload({
@@ -59,7 +62,59 @@ export default function ImagesPage() {
   async function removeImage(id: string) {
     if (!confirm("删除这张图？COS 上的文件也会一起删掉")) return;
     await fetch(`/api/images/${id}`, { method: "DELETE" });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     load();
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) =>
+      prev.size === images.length ? new Set<string>() : new Set(images.map((i) => i.id))
+    );
+  }
+
+  async function deleteSelected() {
+    if (selected.size === 0 || bulkDeleting) return;
+    const planUsed = images.filter((i) => selected.has(i.id) && (i._count?.plans ?? 0) > 0).length;
+    const msg =
+      `确认删除选中的 ${selected.size} 张图片？\nCOS 上的原图和缩略图会一起删除，操作不可恢复。` +
+      (planUsed > 0 ? `\n\n注意：其中 ${planUsed} 张正被发布计划引用，删除后会从对应计划中移除。` : "");
+    if (!confirm(msg)) return;
+
+    setBulkDeleting(true);
+    try {
+      const r = await fetch("/api/images/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selected) }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        alert(data?.error || "批量删除失败");
+        return;
+      }
+      setSelected(new Set());
+      await load();
+      if (data.cosFailed?.length) {
+        alert(`已删除 ${data.deleted} 张，其中 ${data.cosFailed.length} 张的 COS 文件删除失败，数据库记录已移除`);
+      }
+    } catch {
+      alert("批量删除失败，请重试");
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   async function toggleTag(imageId: string, tagName: string) {
@@ -123,15 +178,61 @@ export default function ImagesPage() {
         className="w-full border rounded-lg px-3 py-2 mb-4 text-sm"
       />
 
+      {/* 多选操作栏 */}
+      <div className="flex items-center gap-3 mb-3 text-sm">
+        <label className="flex items-center gap-2 text-stone-500 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            className="cursor-pointer"
+            checked={images.length > 0 && selected.size === images.length}
+            onChange={toggleSelectAll}
+            disabled={images.length === 0}
+          />
+          全选（{images.length}）
+        </label>
+        {selected.size > 0 && (
+          <>
+            <span className="text-stone-600">已选 {selected.size} 张</span>
+            <button
+              onClick={deleteSelected}
+              disabled={bulkDeleting}
+              className="bg-red-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {bulkDeleting ? "删除中..." : "删除选中"}
+            </button>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="text-stone-500 hover:text-stone-800 px-2 py-1.5"
+            >
+              取消选择
+            </button>
+          </>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {images.map((img) => (
-          <div key={img.id} className="bg-white rounded-xl overflow-hidden shadow-sm group">
+          <div
+            key={img.id}
+            className={`bg-white rounded-xl overflow-hidden shadow-sm group ${
+              selected.has(img.id) ? "ring-2 ring-red-500" : ""
+            }`}
+          >
             <div className="aspect-square overflow-hidden relative">
               <img
                 src={img.thumbnail || img.url}
                 alt={img.title}
                 className="w-full h-full object-cover group-hover:scale-105 transition"
               />
+              <label className="absolute top-2 left-2 z-10 flex items-center justify-center bg-white/85 rounded-md p-1 cursor-pointer shadow-sm">
+                <input
+                  type="checkbox"
+                  className="cursor-pointer"
+                  checked={selected.has(img.id)}
+                  onChange={() => toggleSelect(img.id)}
+                  aria-label="选择这张图片"
+                />
+              </label>
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                 <button
                   onClick={() => copyUrl(img.url)}
