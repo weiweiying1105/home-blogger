@@ -19,6 +19,8 @@ model Image {
   width       Int?
   height      Int?
   size        Int?
+  /// 是否从 /gallery 图库中隐藏（默认显示）
+  hiddenFromGallery Boolean @default(false)
   createdAt   DateTime  @default(now())
   categories  CategoryOnImage[]
   tags        ImageTag[]

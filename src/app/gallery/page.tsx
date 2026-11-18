@@ -51,25 +51,43 @@ export default function GalleryPage() {
   const [tagFilter, setTagFilter] = useState("");
   const [tagApplied, setTagApplied] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [catImageIds, setCatImageIds] = useState<string[]>([]);
+
+  const PAGE_SIZE = 30;
 
   async function load() {
     const params = new URLSearchParams();
     if (activeCat) params.set("category", activeCat);
     if (tagApplied) params.set("tag", tagApplied);
+    params.set("scope", "gallery");
+    params.set("page", String(page));
+    params.set("pageSize", String(PAGE_SIZE));
     const [ir, cr] = await Promise.all([
-      fetch("/api/images" + (params.toString() ? `?${params}` : "")),
+      fetch("/api/images?" + params.toString()),
       fetch("/api/categories"),
     ]);
-    setImages(await ir.json());
+    const data = await ir.json();
+    setImages(data.items ?? []);
+    setTotal(data.total ?? 0);
     setTree(await cr.json());
+
+    // 当前分类下已有的全部图片 id（用于选图弹窗的初始选中状态，跨页也要完整）
+    if (activeCat) {
+      const r2 = await fetch(`/api/images?category=${activeCat}&page=1&pageSize=200`);
+      const d2 = await r2.json();
+      setCatImageIds((d2.items ?? []).map((i: ImageItem) => i.id));
+    } else {
+      setCatImageIds([]);
+    }
   }
 
-  useEffect(() => { load(); }, [activeCat, tagApplied]);
+  useEffect(() => { setPage(1); }, [activeCat, tagApplied]);
+  useEffect(() => { load(); }, [activeCat, tagApplied, page]);
 
   // 当前分类下已有的图片 ID
-  const selectedIds = images
-    .filter((img) => img.categories.some((c) => c.categoryId === activeCat))
-    .map((img) => img.id);
+  const selectedIds = catImageIds;
 
   // 确认选图：把选中的图和当前分类关联
   async function onPick(ids: string[]) {
@@ -79,9 +97,9 @@ export default function GalleryPage() {
       return;
     }
     // 先删除不在 ids 里的关联
-    for (const img of images) {
-      if (img.categories.some((c) => c.categoryId === activeCat) && !ids.includes(img.id)) {
-        await fetch(`/api/images/${img.id}/categories`, {
+    for (const id of selectedIds) {
+      if (!ids.includes(id)) {
+        await fetch(`/api/images/${id}/categories`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ categoryId: activeCat }),
@@ -90,7 +108,7 @@ export default function GalleryPage() {
     }
     // 加新的
     for (const id of ids) {
-      if (!images.some((img) => img.id === id && img.categories.some((c) => c.categoryId === activeCat))) {
+      if (!selectedIds.includes(id)) {
         await fetch(`/api/images/${id}/categories`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -99,6 +117,17 @@ export default function GalleryPage() {
       }
     }
     setPickerOpen(false);
+    load();
+  }
+
+  /** 从图库移除（保留分类和标签，只是不在 gallery 显示，可在 /images 恢复） */
+  async function hideFromGallery(id: string) {
+    if (!confirm("让这张图不在 gallery 显示？\n图片本身和分类/标签都会保留，可在 /images 页面恢复显示。")) return;
+    await fetch(`/api/images/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hiddenFromGallery: true }),
+    });
     load();
   }
 
@@ -215,12 +244,18 @@ export default function GalleryPage() {
               </div>
               <CatOverlay categories={img.categories} />
               {/* 悬停显示分类编辑按钮 */}
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 rounded-lg flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition">
                 <button
                   onClick={() => setEditingImg(editingImg === img.id ? null : img.id)}
                   className="bg-white text-xs px-3 py-1.5 rounded-lg"
                 >
                   编辑分类
+                </button>
+                <button
+                  onClick={() => hideFromGallery(img.id)}
+                  className="bg-stone-800/90 text-white text-xs px-3 py-1.5 rounded-lg"
+                >
+                  不在图库显示
                 </button>
               </div>
               {/* 分类选择弹层 */}
@@ -244,6 +279,29 @@ export default function GalleryPage() {
             </div>
           ))}
         </div>
+
+        {/* 分页 */}
+        {total > PAGE_SIZE && (
+          <div className="flex items-center justify-center gap-3 mt-6 text-sm">
+            <button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page <= 1}
+              className="px-3 py-1.5 rounded-lg border bg-white disabled:opacity-40"
+            >
+              上一页
+            </button>
+            <span className="text-stone-500">
+              第 {page} / {Math.max(Math.ceil(total / PAGE_SIZE), 1)} 页 · 共 {total} 张
+            </span>
+            <button
+              onClick={() => setPage((p) => p + 1)}
+              disabled={page >= Math.ceil(total / PAGE_SIZE)}
+              className="px-3 py-1.5 rounded-lg border bg-white disabled:opacity-40"
+            >
+              下一页
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 选图弹窗 */}

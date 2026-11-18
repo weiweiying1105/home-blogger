@@ -12,6 +12,27 @@ const PUBLIC_URL = `https://${BUCKET}.cos.${REGION}.myqcloud.com`;
 
 export const runtime = "nodejs";
 
+/** 切换「是否在 gallery 图库中显示」 */
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+  if (typeof body?.hiddenFromGallery !== "boolean") {
+    return NextResponse.json({ error: "hiddenFromGallery 必须是布尔值" }, { status: 400 });
+  }
+  try {
+    const image = await prisma.image.update({
+      where: { id },
+      data: { hiddenFromGallery: body.hiddenFromGallery },
+    });
+    return NextResponse.json({ ok: true, hiddenFromGallery: image.hiddenFromGallery });
+  } catch {
+    return NextResponse.json({ error: "图片不存在" }, { status: 404 });
+  }
+}
+
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }

@@ -90,7 +90,14 @@ export default function ImagePicker({
   const [q, setQ] = useState("");
   const [uploading, setUploading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<ImageItem[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const PAGE_SIZE = 24;
 
   const { pasting } = usePasteUpload({
     endpoint: categoryId ? "/api/upload-gallery" : "/api/upload",
@@ -106,12 +113,47 @@ export default function ImagePicker({
     },
   });
 
-  async function load() {
-    const r = await fetch("/api/images");
-    setImages(await r.json());
+  /** 拉第 p 页；reset=true 时替换列表（换关键词/首次加载） */
+  async function fetchPage(p: number, reset = false) {
+    const params = new URLSearchParams();
+    params.set("page", String(p));
+    params.set("pageSize", String(PAGE_SIZE));
+    if (q.trim()) params.set("q", q.trim());
+    const r = await fetch("/api/images?" + params.toString());
+    const data = await r.json();
+    const items: ImageItem[] = data.items ?? [];
+    setImages((prev) => (reset ? items : [...prev, ...items]));
+    setHasMore(Boolean(data.hasMore));
+    setTotal(data.total ?? 0);
+    setPage(p);
   }
 
-  useEffect(() => { load(); }, []);
+  function load() {
+    fetchPage(1, true);
+  }
+
+  // 搜索关键词变化：防抖后回到第一页重新查
+  useEffect(() => {
+    const timer = setTimeout(() => { fetchPage(1, true); }, 400);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  // 编辑管理模式：已选图片可能不在当前页，单独按 id 回填
+  const selectedKey = selected.join(",");
+  useEffect(() => {
+    if (!manageMode) return;
+    if (!selectedKey) { setSelectedImages([]); return; }
+    fetch(`/api/images?ids=${selectedKey}&page=1&pageSize=200`)
+      .then((r) => r.json())
+      .then((d) => setSelectedImages(d.items ?? []));
+  }, [manageMode, selectedKey]);
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    await fetchPage(page + 1);
+    setLoadingMore(false);
+  }
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -135,19 +177,8 @@ export default function ImagePicker({
     }
   }
 
-  const filtered = images.filter((img) => {
-    if (!q) return true;
-    const catNames = (img.categories ?? []).map((c) => c.category?.name ?? "");
-    return (
-      img.title.includes(q) ||
-      img.tags?.some((t) => t.tag.name.includes(q)) ||
-      catNames.some((n) => n.includes(q))
-    );
-  });
-
   // 编辑管理模式：只展示已选中的图片
   if (manageMode) {
-    const selectedImages = images.filter((img) => selected.includes(img.id));
     return (
       <div>
         <div className="flex items-center gap-2 mb-3">
@@ -213,7 +244,7 @@ export default function ImagePicker({
                 </button>
               </div>
               <div className="grid grid-cols-4 gap-2 max-h-80 overflow-y-auto">
-                {filtered.map((img) => (
+                {images.map((img) => (
                   <div
                     key={img.id}
                     onClick={() => pick(img.id)}
@@ -233,6 +264,20 @@ export default function ImagePicker({
                   </div>
                 ))}
               </div>
+              <div className="text-xs text-stone-400 mt-2">
+                已显示 {images.length} / {total} 张
+              </div>
+              {hasMore && (
+                <div className="text-center mt-1">
+                  <button
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="text-xs px-3 py-1.5 border rounded-lg bg-white disabled:opacity-50"
+                  >
+                    {loadingMore ? "加载中..." : "加载更多"}
+                  </button>
+                </div>
+              )}
               <div className="flex justify-end gap-2 mt-4">
                 <button onClick={() => setPickerOpen(false)} className="px-4 py-2 text-sm text-stone-500">取消</button>
                 <button onClick={() => setPickerOpen(false)} className="px-4 py-2 text-sm bg-stone-800 text-white rounded-lg">
@@ -277,7 +322,7 @@ export default function ImagePicker({
       </div>
 
       <div className="grid grid-cols-4 gap-2 max-h-96 overflow-y-auto">
-        {filtered.map((img) => (
+        {images.map((img) => (
           <div
             key={img.id}
             onClick={() => pick(img.id)}
@@ -297,6 +342,20 @@ export default function ImagePicker({
           </div>
         ))}
       </div>
+      <div className="text-xs text-stone-400 mt-2">
+        已显示 {images.length} / {total} 张
+      </div>
+      {hasMore && (
+        <div className="text-center mt-1">
+          <button
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="text-xs px-3 py-1.5 border rounded-lg bg-white disabled:opacity-50"
+          >
+            {loadingMore ? "加载中..." : "加载更多"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

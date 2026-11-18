@@ -8,12 +8,17 @@ type ImageItem = {
   url: string;
   thumbnail: string | null;
   title: string;
+  hiddenFromGallery?: boolean;
   tags: { tag: { id: string; name: string } }[];
   _count?: { plans: number };
 };
 
+const PAGE_SIZE = 40;
+
 export default function ImagesPage() {
   const [images, setImages] = useState<ImageItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [allTags, setAllTags] = useState<{ name: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [editingImg, setEditingImg] = useState<string | null>(null);
@@ -30,15 +35,22 @@ export default function ImagesPage() {
   });
 
   async function load() {
+    const params = new URLSearchParams();
+    if (activeTag) params.set("tag", activeTag);
+    params.set("page", String(page));
+    params.set("pageSize", String(PAGE_SIZE));
     const [ir, tr] = await Promise.all([
-      fetch("/api/images" + (activeTag ? `?tag=${encodeURIComponent(activeTag)}` : "")),
+      fetch("/api/images?" + params.toString()),
       fetch("/api/tags"),
     ]);
-    setImages(await ir.json());
+    const data = await ir.json();
+    setImages(data.items ?? []);
+    setTotal(data.total ?? 0);
     setAllTags(await tr.json());
   }
 
-  useEffect(() => { load(); }, [activeTag]);
+  useEffect(() => { setPage(1); }, [activeTag]);
+  useEffect(() => { load(); }, [activeTag, page]);
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const files = e.target.files;
@@ -80,9 +92,23 @@ export default function ImagesPage() {
   }
 
   function toggleSelectAll() {
-    setSelected((prev) =>
-      prev.size === images.length ? new Set<string>() : new Set(images.map((i) => i.id))
-    );
+    setSelected((prev) => {
+      const pageIds = images.map((i) => i.id);
+      const allSelected = pageIds.length > 0 && pageIds.every((id) => prev.has(id));
+      const next = new Set(prev);
+      if (allSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  }
+
+  async function toggleHidden(img: ImageItem) {
+    await fetch(`/api/images/${img.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hiddenFromGallery: !img.hiddenFromGallery }),
+    });
+    load();
   }
 
   async function deleteSelected() {
@@ -106,7 +132,10 @@ export default function ImagesPage() {
         return;
       }
       setSelected(new Set());
-      await load();
+      const remaining = Math.max(total - (data.deleted ?? 0), 0);
+      const lastPage = Math.max(Math.ceil(remaining / PAGE_SIZE), 1);
+      if (page > lastPage) setPage(lastPage);
+      else await load();
       if (data.cosFailed?.length) {
         alert(`已删除 ${data.deleted} 张，其中 ${data.cosFailed.length} 张的 COS 文件删除失败，数据库记录已移除`);
       }
@@ -184,12 +213,13 @@ export default function ImagesPage() {
           <input
             type="checkbox"
             className="cursor-pointer"
-            checked={images.length > 0 && selected.size === images.length}
+            checked={images.length > 0 && images.every((i) => selected.has(i.id))}
             onChange={toggleSelectAll}
             disabled={images.length === 0}
           />
-          全选（{images.length}）
+          全选本页（{images.length}）
         </label>
+        <span className="text-stone-400">共 {total} 张</span>
         {selected.size > 0 && (
           <>
             <span className="text-stone-600">已选 {selected.size} 张</span>
@@ -233,6 +263,11 @@ export default function ImagesPage() {
                   aria-label="选择这张图片"
                 />
               </label>
+              {img.hiddenFromGallery && (
+                <span className="absolute bottom-2 left-2 z-10 text-[11px] leading-4 bg-stone-800/80 text-white px-1.5 rounded">
+                  不在 gallery
+                </span>
+              )}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                 <button
                   onClick={() => copyUrl(img.url)}
@@ -293,10 +328,42 @@ export default function ImagesPage() {
               >
                 {analyzing === img.id ? "分析中..." : "✨ AI 打标签"}
               </button>
+              <button
+                onClick={() => toggleHidden(img)}
+                title={img.hiddenFromGallery ? "点击恢复在 gallery 显示" : "点击让这张图不出现在 gallery"}
+                className={`mt-1 block text-xs hover:underline ${
+                  img.hiddenFromGallery ? "text-stone-800 font-medium" : "text-stone-400 hover:text-stone-700"
+                }`}
+              >
+                {img.hiddenFromGallery ? "↩ 恢复显示在 gallery" : "🚫 不在 gallery 显示"}
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* 分页 */}
+      {total > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-3 mt-6 text-sm">
+          <button
+            onClick={() => setPage((p) => Math.max(p - 1, 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 rounded-lg border bg-white disabled:opacity-40"
+          >
+            上一页
+          </button>
+          <span className="text-stone-500">
+            第 {page} / {Math.max(Math.ceil(total / PAGE_SIZE), 1)} 页
+          </span>
+          <button
+            onClick={() => setPage((p) => p + 1)}
+            disabled={page >= Math.ceil(total / PAGE_SIZE)}
+            className="px-3 py-1.5 rounded-lg border bg-white disabled:opacity-40"
+          >
+            下一页
+          </button>
+        </div>
+      )}
 
       {/* AI 标签预览弹窗 */}
       {aiPreview && (
